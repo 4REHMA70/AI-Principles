@@ -38,7 +38,7 @@ class Maze:
 
     def print_maze(self):
         for row in self.matrix:
-            print(' '.join(map(str, row))) # Simply printing each row in matrix
+            print(' '.join(map(str, row))) # Printing each row in matrix
   
 
     def predefined_maze(self):
