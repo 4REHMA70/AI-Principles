@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import math
 #
 class Maze:
     def __init__(self, rows, cols, seed=None):
@@ -9,18 +10,18 @@ class Maze:
         self.matrix = [[1] * cols for _ in range(rows)]  # Initialize with walls. For each col in row, turn it into 1.
 
     def generate_maze(self):
-        random.seed(self.seed) # Setting seed
+        random.seed(self.seed)  # Setting seed
 
         # Initialize starting point and stack for backtracking
         stack = [(1, 1)]  # Starting point
         self.matrix[1][1] = 0  # Set starting point as path. First col, first row is 0
 
-        while stack: # Same logic as search algorithms. While stack isn't empty:
-            current_cell = stack[-1] # Set current cell
-            neighbors = self.get_unvisited_neighbors(current_cell[0], current_cell[1]) # Sets the unvisited neighbors
+        while stack:  # Same logic as search algorithms. While stack isn't empty:
+            current_cell = stack[-1]  # Set current cell
+            neighbors = self.get_unvisited_neighbors(current_cell[0], current_cell[1])  # Sets the unvisited neighbors
 
             if neighbors:
-                next_cell = random.choice(neighbors) # If neighbors are there, randomly choose the next cell to explore
+                next_cell = random.choice(neighbors)  # If neighbors are there, randomly choose the next cell to explore
                 x, y = next_cell
                 nx, ny = current_cell
 
@@ -28,10 +29,18 @@ class Maze:
                 self.matrix[(x + nx) // 2][(y + ny) // 2] = 0  # Set the cell between current and next as path
                 self.matrix[x][y] = 0  # Set the next cell as path
 
+                # Introduce randomness to cut across walls
+                random_neighbors = self.get_unvisited_neighbors(x, y)
+                if random_neighbors and random.random() < 0.45:  # Adjust the probability as needed
+                    random_neighbor = random.choice(random_neighbors)
+                    rx, ry = random_neighbor
+                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set a random cell between current and random neighbor as path
+
                 stack.append(next_cell)
             else:
                 stack.pop()  # Backtrack
         return np.array(self.matrix)
+
 
     def get_unvisited_neighbors(self, x, y): 
         neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
@@ -71,11 +80,24 @@ class Maze:
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
         self.matrix=maze
 
+    def set_start_and_goal(self):
+            free_spaces = [(i, j) for i in range(self.rows) for j in range(self.cols) if self.matrix[i][j] == 0]
+
+            if not free_spaces:
+                raise ValueError("No free spaces in the maze.")
+
+
+            while True:
+                start, goal = random.sample(free_spaces, 2)
+                min_distance=5
+                if math.dist(start,goal) >= min_distance:
+                    return start, goal
 
 # Example Usage
 if __name__ == "__main__":
     maze = Maze(rows=9, cols=9, seed=42) #ROW, COL, AND SEED SPECIFIED HERE
     maze.generate_maze()
-    maze.print_maze()
+    #maze.print_maze()
     maze.predefined_maze()
-    maze.print_maze()
+    maze.set_start_and_goal()
+    #maze.print_maze()
