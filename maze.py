@@ -1,4 +1,5 @@
 import random
+import numpy as np
 #
 class Maze:
     def __init__(self, rows, cols, seed=None):
@@ -30,6 +31,7 @@ class Maze:
                 stack.append(next_cell)
             else:
                 stack.pop()  # Backtrack
+        return np.array(self.matrix)
 
     def get_unvisited_neighbors(self, x, y): 
         neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
