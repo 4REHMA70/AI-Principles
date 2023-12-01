@@ -3,12 +3,13 @@ import numpy as np
 import math
 #
 class Maze:
-    def __init__(self, rows, cols, space=None, seed=None):
+    def __init__(self, rows, cols, space=None, seed=None, remove_lone_blocks=False):
         self.rows = rows
         self.cols = cols
         self.space = space
         self.seed = seed
-        self.matrix = [[1] * cols for _ in range(rows)]  # Initialize with walls. For each col in row, turn it into 1.
+        self.matrix = [[1] * cols for _ in range(rows)]  # Initialize with walls. For each col in row, turn it into 1
+        self.remove_lone_blocks = remove_lone_blocks
 
     def generate_maze(self):
         random.seed(self.seed)  # Setting seed
@@ -27,20 +28,22 @@ class Maze:
                 nx, ny = current_cell
 
                 # Carve a path
-                self.matrix[(x + nx) // 2][(y + ny) // 2] = 0  # Set the cell between current and next as path
-                self.matrix[x][y] = 0  # Set the next cell as path
+                self.matrix[(x + nx) // 2][(y + ny) // 2] = 0  # Set cell between current and next as path
+                self.matrix[x][y] = 0  # Set next cell as path
 
                 # Introduce randomness to cut across walls
                 random_neighbors = self.get_unvisited_neighbors(x, y)
-                if random_neighbors and random.random() < 0.7:  # Adjust the probability as needed
+                if random_neighbors and random.random() < 0.5:  # Adjust probability for cutting as needed
                     random_neighbor = random.choice(random_neighbors)
                     rx, ry = random_neighbor
-                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set a random cell between current and random neighbor as path
+                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set random cell between current and random neighbor as path
 
                 stack.append(next_cell)
             else:
                 stack.pop()  # Backtrack
         self.spacing()
+        if self.remove_lone_blocks:
+            self.remove_isolated_blocks()
         return np.array(self.matrix)
 
     def spacing(self):
@@ -50,7 +53,30 @@ class Maze:
                     if self.matrix[i][j] == 0:
                         self.matrix[i][j - 1] = 0  
 
-    
+    def remove_isolated_blocks(self):
+        rows, cols = len(self.matrix), len(self.matrix[0])
+        
+        # Helper function to get neighbors 
+        def get_neighbors(r, c):
+            neighbors = []
+            if r > 0 and self.matrix[r-1][c] == 1:
+                neighbors.append((r-1, c))
+            if r < rows-1 and self.matrix[r+1][c] == 1:
+                neighbors.append((r+1, c))
+            if c > 0 and self.matrix[r][c-1] == 1:
+                neighbors.append((r, c-1))
+            if c < cols-1 and self.matrix[r][c+1] == 1:
+                neighbors.append((r, c+1))
+            return neighbors
+        
+        # Identify and remove isolated blocks
+        removed = 0
+        for r in range(1, rows-1):
+            for c in range(1, cols-1):
+                if self.matrix[r][c] == 1 and not get_neighbors(r, c):
+                    self.matrix[r][c] = 0
+                    removed += 1
+                    
     def get_unvisited_neighbors(self, x, y): 
         neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
         neighbors = [(nx, ny) for nx, ny in neighbors if 0 < nx < self.rows - 1 and 0 < ny < self.cols - 1 and self.matrix[nx][ny]] # For valid neighbors, get coords
@@ -101,9 +127,10 @@ class Maze:
                     return start, goal
 
 if __name__ == "__main__":
-    maze = Maze(rows=6, cols=6, space=2, seed=42) # Row, Col, and Seed specified here!
+    maze = Maze(rows=9, cols=9, space=2, seed=42) # Row, Col, and Seed specified here!
     maze.generate_maze()
     maze.spacing()
+    #maze.remove_isolated_blocks()
     maze.print_maze()
     #maze.predefined_maze()
     maze.set_start_and_goal()
