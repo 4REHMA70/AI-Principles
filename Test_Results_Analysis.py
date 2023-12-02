@@ -1,5 +1,28 @@
 import numpy as np
 from scipy.stats import sem, t
+     
+"""
+Iterations: 100        
+Average Execution Time: 0.001598355770111084 seconds
+Average Peak Memory: 0.0288818359375 MB
+
+Average Execution Time: 0.0038525700569152833 seconds
+Average Peak Memory: 0.10086318969726563 MB
+
+Iterations: 1000
+Average Execution Time: 0.0020528242588043213 seconds
+Average Peak Memory: 0.03667719268798828 MB
+
+Average Execution Time: 0.006160878658294678 seconds
+Average Peak Memory: 0.17426569366455077 MB
+
+Iterations: 10000
+Average Execution Time: 0.0007655791521072388 seconds
+Average Peak Memory: 0.019989265537261963 MB
+
+Average Execution Time: 0.005421704435348511 seconds
+Average Peak Memory: 0.13456009302139282 MB
+"""
 
 # Replace these with your actual data
 execution_times = [0.001598, 0.003852, 0.002052, 0.006160, 0.000765, 0.005421]

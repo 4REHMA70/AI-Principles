@@ -88,7 +88,6 @@ class Maze:
         for row in self.matrix:
             print(' '.join(map(str, row))) # Printing each row in matrix
   
-
     def predefined_maze(self):
         maze = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], 
@@ -115,7 +114,10 @@ class Maze:
                 [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0], 
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-        self.matrix=maze
+        self.matrix = maze
+        self.rows = len(maze)
+        self.cols = len(maze[0])
+        return np.array(self.matrix)
 
     def set_start_and_goal(self, min_distance=5):
             free_spaces = [(i, j) for i in range(self.rows) for j in range(self.cols) if self.matrix[i][j] == 0]
