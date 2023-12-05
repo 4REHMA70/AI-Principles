@@ -19,7 +19,7 @@ class Maze:
         self.matrix[1][1] = 0  # Set starting point as path. First col, first row is 0
 
         while stack:  # Same logic as search algorithms. While stack isn't empty:
-            current_cell = stack[-1]  # Set current cell
+            current_cell = stack[-1]  # Set current cell. FILO (First In Last Out) method from DFS
             neighbors = self.get_unvisited_neighbors(current_cell[0], current_cell[1])  # Sets the unvisited neighbors
 
             if neighbors:
@@ -31,13 +31,14 @@ class Maze:
                 self.matrix[(x + nx) // 2][(y + ny) // 2] = 0  # Set cell between current and next as path
                 self.matrix[x][y] = 0  # Set next cell as path
 
-                # Introduce randomness to cut across walls
+                # Get random neighbors
                 random_neighbors = self.get_unvisited_neighbors(x, y)
 
-                if random_neighbors and random.random() < rand:  # Adjust rate/probability of cutting as needed
+                if random_neighbors and random.random() < rand:  # Adjust rate/probability of cutting as needed. 
+                    # Only proceed with path generation under certain probability
                     random_neighbor = random.choice(random_neighbors)
                     rx, ry = random_neighbor
-                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set random cell between current and random neighbor as path
+                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set cell between current and random neighbor as path. 
 
                 stack.append(next_cell)
             else:
@@ -60,15 +61,8 @@ class Maze:
         
         # Inner function to get neighbors. Different from get_unvisited_neighbors which is tailored for the wall generation 
         def get_neighbors(r, c):
-            neighbors = []
-            if r > 0 and self.matrix[r-1][c] == 1:
-                neighbors.append((r-1, c))
-            if r < rows-1 and self.matrix[r+1][c] == 1:
-                neighbors.append((r+1, c))
-            if c > 0 and self.matrix[r][c-1] == 1:
-                neighbors.append((r, c-1))
-            if c < cols-1 and self.matrix[r][c+1] == 1:
-                neighbors.append((r, c+1))
+            directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            neighbors = [(r + dr, c + dc) for dr, dc in directions if 0 <= r + dr < rows and 0 <= c + dc < cols and self.matrix[r + dr][c + dc] == 1]
             return neighbors
         
         # Identify and remove isolated blocks
