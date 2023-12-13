@@ -132,18 +132,18 @@ if __name__ == "__main__":
         rows = random.randint(15, 40)
         cols = random.randint(15, 40)
         seed = random.randint(1, 1000)
-        cutting_rate = random.uniform(0.4, 0.9)
+        cutting_rate = random.uniform(0.4, 0.75)
         goal_and_start_spacing = random.randint(round(0.25*visualizer.euclidean_distance(rows, cols)), round(0.85*visualizer.euclidean_distance(rows, cols)))
 
         # RANDOM MAZE
-        # maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
-        # environment = maze.generate_maze(rand=cutting_rate) 
-        # start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
+        maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+        environment = maze.generate_maze(rand=cutting_rate) 
+        start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
 
         # STATIC MAZE (comment above then uncomment this to set static)
-        maze = Maze.Maze(rows=10, cols=10, space_step=None, seed=45, remove_lone_blocks=False)
-        environment = maze.generate_maze(rand=0)
-        start_position, goal_position = maze.set_start_and_goal(5)
+        # maze = Maze.Maze(rows=10, cols=10, space_step=None, seed=45, remove_lone_blocks=False)
+        # environment = maze.generate_maze(rand=0)
+        # start_position, goal_position = maze.set_start_and_goal(5)
 
         path_graph_search, execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
         visualizer.move_robot_along_path(environment, start_position, goal_position, path_graph_search)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
             rows = random.randint(15, 50)
             cols = random.randint(15, 50)
             seed = random.randint(1, 1000)
-            cutting_rate = random.uniform(0.35, 0.85)
+            cutting_rate = random.uniform(0.45, 0.85)
             goal_and_start_spacing = random.randint(round(0.25*visualizer.euclidean_distance(rows, cols)), round(0.85*visualizer.euclidean_distance(rows, cols))) 
             # Random range from 25% and 85% of the hypotenuse of the 2 dimensions. Proportional to maze size, beyond Q1 statistically.
 

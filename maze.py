@@ -49,6 +49,12 @@ class Maze:
             self.remove_isolated_blocks()
         return np.array(self.matrix)
 
+                    
+    def get_unvisited_neighbors(self, x, y): 
+        neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
+        neighbors = [(nx, ny) for nx, ny in neighbors if 0 < nx < self.rows - 1 and 0 < ny < self.cols - 1 and self.matrix[nx][ny]] # For valid neighbors, get coords
+        return [neighbor for neighbor in neighbors if self.matrix[(x + neighbor[0]) // 2][(y + neighbor[1]) // 2]] # Setting neighbors that have an unvisited cell in between (neighbors with a '1' in the middle indicate an unvisited cell)
+
     def spacing(self): 
         if self.space_step != 0: 
             for i in range(self.rows):
@@ -72,11 +78,6 @@ class Maze:
                 if self.matrix[r][c] == 1 and not get_neighbors(r, c):
                     self.matrix[r][c] = 0
                     removed += 1
-                    
-    def get_unvisited_neighbors(self, x, y): 
-        neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
-        neighbors = [(nx, ny) for nx, ny in neighbors if 0 < nx < self.rows - 1 and 0 < ny < self.cols - 1 and self.matrix[nx][ny]] # For valid neighbors, get coords
-        return [neighbor for neighbor in neighbors if self.matrix[(x + neighbor[0]) // 2][(y + neighbor[1]) // 2]] # Setting neighbors that have an unvisited cell in between (neighbors with a '1' in the middle indicate an unvisited cell)
 
     def print_maze(self):
         for row in self.matrix:
