@@ -97,13 +97,6 @@ class Robot:
                 
         return None
 
-    def move_robot_along_path(self, environment, start, goal, path):
-        if path is not None:
-            for position in path:
-                self.visualize(environment, paths=[path], start=start, goal=goal)
-        else:
-            print("No path found.")
-
     def run_search_algorithm(self, environment, start, goal, visualize=True):
         tracemalloc.start()
 
@@ -130,20 +123,24 @@ class Robot:
     def calculate_obstacle_density(self, maze_matrix):
         total_cells = len(maze_matrix) * len(maze_matrix[0])
         obstacle_cells = sum(row[1:-1].count(1) for row in maze_matrix[1:-1])
-        density_percentage = (obstacle_cells / total_cells) * 100
+        density_percentage = (obstacle_cells/total_cells) * 100
         return density_percentage
 
     def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing):
         maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
         environment = maze.generate_maze(rand=cutting_rate)
-        start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
+        start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
         # Test to prove that the radius checking for goal works 
         environment=np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
-        start_position, goal_position = (0,0), (3,3)
+        start, goal = (0,0), (3,3)
         """
-        path_graph_search, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start_position, goal_position, visualize=True)
-        self.move_robot_along_path(environment, start_position, goal_position, path_graph_search)
+        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualize=True)
+        if path is not None:
+            for _ in path:
+                self.visualize(environment, paths=[path], start=start, goal=goal)
+        else:
+            print("No solution found!")
 
     def multiple_runs(self, num_runs):
         total_time = 0
@@ -154,7 +151,7 @@ class Robot:
             rows, cols, seed, cutting_rate, goal_and_start_spacing = self.generate_random_parameters()
             maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
             environment = maze.generate_maze(rand=cutting_rate)
-            start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
+            start, goal = maze.set_start_and_goal(goal_and_start_spacing)
             
             # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated
             """
@@ -165,12 +162,12 @@ class Robot:
             """
 
             density = self.calculate_obstacle_density(maze.matrix)
-            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start_position, goal_position, visualize=False)
+            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualize=False)
 
             # Because path and visited may be None when radius too big to explore
             if path is not None and visited is not None:
                 path_to_spacing_ratio = len(path)/goal_and_start_spacing # The smaller, the better (generally)
-                search_space_coverage = len(visited) / (rows*cols)
+                search_space_coverage = len(visited)/(rows*cols)
                 solutions_count += 1            
             else:
                 path_to_spacing_ratio = None # For when there's no path due to radius size
@@ -184,9 +181,10 @@ class Robot:
             print()
             # OTHER POTENTIAL PERFORMANCE VALUES: BRANCHING FACTOR
 
-        avg_time = total_time / num_runs
-        avg_memory = total_memory / num_runs
-        print(f"\nTotal Number of runs: {num_runs}")
+        avg_time = total_time/num_runs
+        avg_memory = total_memory/num_runs
+        print()
+        print(f"Total Number of runs: {num_runs}")
         print(f"Average Execution Time: {avg_time} seconds")
         print(f"Average Peak Memory: {avg_memory / (1024 * 1024)} MB")
         print(f"Total Solutions: {solutions_count}")
@@ -199,19 +197,14 @@ class Robot:
         goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
         return rows, cols, seed, cutting_rate, goal_and_start_spacing
     
-    def within_radius(self, position, environment, radius):
-        radius -= 1
-        x, y = position
-        for i in range(max(0, x-radius), min(len(environment), x+radius+1)):
-            for j in range(max(0, y-radius), min(len(environment[0]), y+radius+1)):
-                if environment[i][j] == 1:
-                    return True
-        return False
-
     def is_valid(self, new_x, new_y, environment, radius):
+        radius -= 1
+        for i in range(max(0, new_x-radius), min(len(environment), new_x+radius+1)):
+            for j in range(max(0, new_y-radius), min(len(environment[0]), new_y+radius+1)):
+                if environment[i][j] == 1:
+                    return False 
         return (
-            not self.within_radius((new_x, new_y), environment, radius)
-            and 0 <= new_x < len(environment) 
+            0 <= new_x < len(environment) 
             and 0 <= new_y < len(environment[0])
             and environment[new_x][new_y] == 0
         )
@@ -231,6 +224,6 @@ if __name__ == "__main__":
         
         robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing)
     else:
-        num_runs = 1000
+        num_runs = 100
         # Multiple Runs: Average Scores
         robot.multiple_runs(num_runs)
