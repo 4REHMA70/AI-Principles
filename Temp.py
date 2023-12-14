@@ -7,7 +7,7 @@ import math
 import tracemalloc
 import time
 
-class Visualizer:
+class Robot:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
 
@@ -33,7 +33,7 @@ class Visualizer:
         self.ax.legend()
         plt.pause(0.2)
 
-    def bfs_graph_search(self, environment, start, goal, visualize=True):
+    def bfs_graph_search(self, environment, start, goal, visualize=True, radius=1):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
@@ -42,12 +42,15 @@ class Visualizer:
 
         while queue:
             current, path = queue.popleft()
+            goal_x, goal_y = goal
+            current_x, current_y = current
+            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
 
-            if current == goal:
+            if current == goal or distance <= radius:
                 paths_explored.append(path + [current])
                 if visualize:
-                    visualizer.visualize_environment(environment, paths=paths_explored, start=start_position, goal=goal_position)
-                return path + [current]
+                    self.visualize_environment(environment, paths=paths_explored, start=start, goal=goal)
+                return path + [current], visited
 
             if current in visited:
                 continue
@@ -56,43 +59,34 @@ class Visualizer:
             paths_explored.append(path + [current])
 
             if visualize:
-                visualizer.visualize_environment(environment, paths=paths_explored, start=start_position, goal=goal_position)
+                self.visualize_environment(environment, paths=paths_explored, start=start, goal=goal)
 
-            for dx, dy in directions:
-                new_x, new_y = current[0] + dx, current[1] + dy
-
-
-
-                # for iox, ioy in zip(ox, oy):
-                #     d = math.hypot(iox - x, ioy - y)
-
-                # if d < self.rr:                # Be careful with this line, you can change '<' to '<=' to see the differrences of new_array defined laterr!
-                #     self.obmap[ix][iy] = True
-
-                # new_array = np.zeros(np.shape(self.obmap))
-                # for i in range(new_array.shape[0]):
-                #     for j in range(new_array.shape[1]): 
-                #         if self.obmap[i][j]==True:
-                #             new_array[i][j]=1   
-
-                # if self.obmap[node.x][node.y]:
-                #     return False
-
-
-                if (
-                    0 <= new_x < len(environment)
-                    and 0 <= new_y < len(environment[0])
-                    and environment[new_x][new_y] == 0
-                    and (new_x, new_y) not in visited
-                ):
-                    queue.append(((new_x, new_y), path + [current]))
-
+            """
+            # Can test the step-code over here. Note: Step of the length of the maze is dangerous as it traverses in only that 
+            step, consequently sacrificing exploration. 66% solutions missed 
+            """
+            step = 6
+            for dx, dy in directions: # For each direction
+                last = None
+                for i in range(1, step+1): # In range of that step
+                    new_x, new_y = current[0] + i*dx, current[1] + i*dy # Get new coord with each of that ith of step
+                    if (
+                        not self.within_radius((new_x, new_y), environment, radius)
+                        and 0 <= new_x < len(environment) 
+                        and 0 <= new_y < len(environment[0])
+                        and environment[new_x][new_y] == 0 
+                    ):
+                        last = (new_x, new_y) # Storing in last if valid, updating sequentially
+                    else:
+                        break
+                if last:
+                    queue.append((last, path + [current])) # Appending only last to queue 
         return None
 
     def move_robot_along_path(self, environment, start, goal, path):
         if path is not None:
             for position in path:
-                visualizer.visualize_environment(environment, paths=[path], start=start, goal=goal)
+                self.visualize_environment(environment, paths=[path], start=start, goal=goal)
         else:
             print("No path found.")
 
@@ -101,7 +95,11 @@ class Visualizer:
 
         start_time = time.time()
 
-        path = self.bfs_graph_search(environment, start, goal, visualize)
+        result = self.bfs_graph_search(environment, start, goal, visualize)
+        if result:
+            path, visited = result
+        else:
+            path, visited = None, None
 
         end_time = time.time()
         exec_time = end_time - start_time
@@ -109,7 +107,7 @@ class Visualizer:
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         # CAN ADD PATH TO RETURN
-        return path, exec_time, peak
+        return path, exec_time, current, peak, visited
     
     def euclidean_distance(self, rows, cols):
         distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
@@ -121,102 +119,97 @@ class Visualizer:
         density_percentage = (obstacle_cells / total_cells) * 100
         return density_percentage
 
-
-if __name__ == "__main__":
-    visualizer = Visualizer()
-    visualizing = True
-    random.seed() # FOR REPRODUCABILITY 
-
-    if visualizing:
-        # SINGLE RUN: VISUALIZATION
-        rows = random.randint(15, 40)
-        cols = random.randint(15, 40)
-        seed = random.randint(1, 1000)
-        cutting_rate = random.uniform(0.4, 0.75)
-        goal_and_start_spacing = random.randint(round(0.25*visualizer.euclidean_distance(rows, cols)), round(0.85*visualizer.euclidean_distance(rows, cols)))
-
-        # RANDOM MAZE
-        maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
-        environment = maze.generate_maze(rand=cutting_rate) 
+    def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing):
+        maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+        environment = maze.generate_maze(rand=cutting_rate)
         start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
-
-        # STATIC MAZE (comment above then uncomment this to set static)
-        # maze = Maze.Maze(rows=10, cols=10, space_step=None, seed=45, remove_lone_blocks=False)
-        # environment = maze.generate_maze(rand=0)
-        # start_position, goal_position = maze.set_start_and_goal(5)
-
-        path_graph_search, execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
-        visualizer.move_robot_along_path(environment, start_position, goal_position, path_graph_search)
+        """
+        # Test to prove that the radius checking for goal works 
+        environment=np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
+        start_position, goal_position = (0,0), (3,3)
+        """
+        path_graph_search, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start_position, goal_position, visualize=True)
+        self.move_robot_along_path(environment, start_position, goal_position, path_graph_search)
         plt.show()
-    else:
-        # MULTIPLE RUNS: AVERAGE SCORES
-        num_runs = 100
+
+    def multiple_runs(self, num_runs):
         total_time = 0
         total_memory = 0
+        solutions_count = 0
 
         for i in range(num_runs):
-            rows = random.randint(15, 50)
-            cols = random.randint(15, 50)
-            seed = random.randint(1, 1000)
-            cutting_rate = random.uniform(0.45, 0.85)
-            goal_and_start_spacing = random.randint(round(0.25*visualizer.euclidean_distance(rows, cols)), round(0.85*visualizer.euclidean_distance(rows, cols))) 
-            # Random range from 25% and 85% of the hypotenuse of the 2 dimensions. Proportional to maze size, beyond Q1 statistically.
-
-            maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+            rows, cols, seed, cutting_rate, goal_and_start_spacing = self.generate_random_parameters()
+            maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
             environment = maze.generate_maze(rand=cutting_rate)
-            start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing) # Set to 5-10 if randomized spacing disrupting output
-
-            density = visualizer.calculate_obstacle_density(maze.matrix)
-
+            start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
+            
             # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated
-            """            
+            """
             fig, ax = plt.subplots()
             ax.imshow(environment, cmap='Greys', origin='upper')
             ax.set_title(f"Run {i + 1}")
             plt.pause(1)  # Pause for a short duration to display the plot
             """
 
-            path, exec_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=False)
+            density = self.calculate_obstacle_density(maze.matrix)
+            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start_position, goal_position, visualize=False)
+
+            # Because path and visited may be None when radius too big to explore
+            if path is not None and visited is not None:
+                path_to_spacing_ratio = len(path)/goal_and_start_spacing # The smaller, the better (generally)
+                search_space_coverage = len(visited) / (rows*cols)
+                solutions_count += 1            
+            else:
+                path_to_spacing_ratio = None # For when there's no path due to radius size
+                search_space_coverage = 0
+
             total_time += exec_time
             total_memory += peak_memory
-            print(f"rows: {rows}")
-            print(f"cols: {cols}")
-            print(f"seed: {seed}")
-            print(f"cutting_rate: {cutting_rate}")
-            print(f"path: {path}")
-            print(f"goal_and_start_spacing: {goal_and_start_spacing}")
-            print(f"density: {density}")
-
-            # OTHER POTENTIAL PERFORMANCE VALUES: PATH LENGTH RATIO TO START AND GOAL LENGTH, SEARCH SPACE COVERAGE, BRANCHING FACTOR
-            # time.sleep(3)
+            array = [rows, cols, seed, cutting_rate, path, goal_and_start_spacing, density, path_to_spacing_ratio, search_space_coverage*100]
+            for label, value in zip(["rows", "cols", "seed", "cutting_rate", "path", "goal_and_start_spacing", "density", "path_to_spacing_ratio", "search_space_coverage (%)"], array):
+                print(f"{label}: {value}")
+            print()
+            # OTHER POTENTIAL PERFORMANCE VALUES: BRANCHING FACTOR
 
         avg_time = total_time / num_runs
         avg_memory = total_memory / num_runs
-        print(f"Total Number of runs: {num_runs}")
+        print(f"\nTotal Number of runs: {num_runs}")
         print(f"Average Execution Time: {avg_time} seconds")
         print(f"Average Peak Memory: {avg_memory / (1024 * 1024)} MB")
+        print(f"Total Solutions: {solutions_count}")
 
-"""
-Iterations: 100        
-Average Execution Time: 0.001598355770111084 seconds
-Average Peak Memory: 0.0288818359375 MB
+    def generate_random_parameters(self):
+        rows = random.randint(15, 40)
+        cols = random.randint(15, 40)
+        seed = random.randint(1, 1000)
+        cutting_rate = random.uniform(0.4, 0.85)
+        goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
+        return rows, cols, seed, cutting_rate, goal_and_start_spacing
+    
+    def within_radius(self, position, environment, radius):
+        radius -= 1
+        x, y = position
+        for i in range(max(0, x-radius), min(len(environment), x+radius+1)):
+            for j in range(max(0, y-radius), min(len(environment[0]), y+radius+1)):
+                if environment[i][j] == 1:
+                    return True
+        return False
 
-Average Execution Time: 0.0038525700569152833 seconds
-Average Peak Memory: 0.10086318969726563 MB
+if __name__ == "__main__":
+    robot = Robot()
+    visualizing = False 
+    random.seed()  # FOR REPRODUCIBILITY!
 
-Iterations: 1000
-Average Execution Time: 0.0020528242588043213 seconds
-Average Peak Memory: 0.03667719268798828 MB
+    # Single Run: Visualization
+    if visualizing:
+        # Static Parameters (comment and uncomment to select respective options)
+        # rows, cols, seed, cutting_rate, goal_and_start_spacing = 10, 10, 3, 0.5, 6
 
-Average Execution Time: 0.006160878658294678 seconds
-Average Peak Memory: 0.17426569366455077 MB
-
-Iterations: 10000
-Average Execution Time: 0.0007655791521072388 seconds
-Average Peak Memory: 0.019989265537261963 MB
-
-Average Execution Time: 0.005421704435348511 seconds
-Average Peak Memory: 0.13456009302139282 MB
-"""
-
-
+        # Random Parameters
+        rows, cols, seed, cutting_rate, goal_and_start_spacing = robot.generate_random_parameters()
+        
+        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing)
+    else:
+        num_runs = 1000
+        # Multiple Runs: Average Scores
+        robot.multiple_runs(num_runs)
