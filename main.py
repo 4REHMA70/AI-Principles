@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
-import Maze
+from maze import Maze
 import random
 import math
 import tracemalloc
 import time
-
+import ui
 class Visualizer:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
@@ -30,7 +30,7 @@ TO-DO:
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        return path, exec_time, peak
+        return exec_time, peak
     
     def euclidean_distance(self, rows, cols):
         distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
@@ -44,27 +44,31 @@ TO-DO:
 
 
 if __name__ == "__main__":
-    visualizer = Visualizer()
-    visualizing = False
+    # visualizer = Visualizer()
+    visualizing = True
 
     # SINGLE RUN: VISUALIZATION
     if visualizing:
-        rows = 35
-        cols = 35
+        rows = 25
+        cols = 25
         seed = 20
         cutting_rate = 0.5
         goal_and_start_spacing = 15
 
-        maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+        maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
         environment = maze.generate_maze(rand=cutting_rate)
         # environment = maze.predefined_maze()
         start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
 
-        path_graph_search, execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
+        # Call the class UI:
+        ui_display = ui.UserInterface(np.array(environment))
+        ui_display.run()
+        # path_graph_search, execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
+        # execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
         """
         ENTER VISUALING FUNCTION CALLING HERE
         """
-        plt.show()
+        # plt.show()
     else:
         # MULTIPLE RUNS: AVERAGE SCORES
         num_runs = 100
@@ -79,14 +83,15 @@ if __name__ == "__main__":
             goal_and_start_spacing = random.randint(1, visualizer.euclidean_distance(rows, cols))
 
             # Move the environment instantiation inside the loop
-            maze = Maze.Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+            maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
             environment = maze.generate_maze(rand=cutting_rate)
             start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
 
             # Calculate obstacle density for each run
             density = visualizer.calculate_obstacle_density(maze.matrix)
 
-            i, exec_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=False)
+            # i, exec_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=False)
+            exec_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=False)
             total_time += exec_time
             total_memory += peak_memory
             print(f"rows: {rows}")

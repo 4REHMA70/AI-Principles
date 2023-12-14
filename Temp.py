@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
-import Maze
+from maze import Maze
 import random
 import math
 import tracemalloc
