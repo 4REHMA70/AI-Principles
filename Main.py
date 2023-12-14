@@ -6,12 +6,14 @@ import random
 import math
 import tracemalloc
 import time
+import ui
 
 class Robot:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
 
-    def visualize_environment(self, environment, paths=None, start=None, goal=None):
+    def visualize(self, environment, paths=None, start=None, goal=None):
+        
         self.ax.clear()
         
         # Convert the environment to a numeric data type
@@ -33,7 +35,31 @@ class Robot:
         self.ax.legend()
         plt.pause(0.2)
 
-    def bfs_graph_search(self, environment, start, goal, visualize=True, radius=1):
+        # ui_display = ui.UserInterface(np.array(environment))
+        # ui_display.run()
+
+    def get_next_steps(self, current, environment, visited, directions, step, radius):
+        next_steps = []
+        
+        for dx, dy in directions:
+            last = None
+            for i in range(1, step+1):
+                new_x, new_y = current[0] + i*dx, current[1] + i*dy
+                
+                if (new_x, new_y) in visited:
+                    continue
+                elif self.is_valid(new_x, new_y, environment, radius):
+                    visited.add(last)
+                    last = (new_x, new_y) 
+                else:
+                    break
+
+            if last:
+                next_steps.append(last)
+        
+        return next_steps
+
+    def breadth_first_search(self, environment, start, goal, visualize=True, radius=1, step=4):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
@@ -49,7 +75,7 @@ class Robot:
             if current == goal or distance <= radius:
                 paths_explored.append(path + [current])
                 if visualize:
-                    self.visualize_environment(environment, paths=paths_explored, start=start, goal=goal)
+                    self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
             if current in visited:
@@ -59,34 +85,22 @@ class Robot:
             paths_explored.append(path + [current])
 
             if visualize:
-                self.visualize_environment(environment, paths=paths_explored, start=start, goal=goal)
+                self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
             """
             # Can test the step-code over here. Note: Step of the length of the maze is dangerous as it traverses in only that 
             step, consequently sacrificing exploration. 66% solutions missed 
             """
-            step = 6
-            for dx, dy in directions: # For each direction
-                last = None
-                for i in range(1, step+1): # In range of that step
-                    new_x, new_y = current[0] + i*dx, current[1] + i*dy # Get new coord with each of that ith of step
-                    if (
-                        not self.within_radius((new_x, new_y), environment, radius)
-                        and 0 <= new_x < len(environment) 
-                        and 0 <= new_y < len(environment[0])
-                        and environment[new_x][new_y] == 0 
-                    ):
-                        last = (new_x, new_y) # Storing in last if valid, updating sequentially
-                    else:
-                        break
-                if last:
-                    queue.append((last, path + [current])) # Appending only last to queue 
+
+            for next_step in self.get_next_steps(current=current, environment=environment, visited=visited, directions=directions, step=step, radius=radius):
+                queue.append((next_step, path + [current])) # Appending only last to queue 
+                
         return None
 
     def move_robot_along_path(self, environment, start, goal, path):
         if path is not None:
             for position in path:
-                self.visualize_environment(environment, paths=[path], start=start, goal=goal)
+                self.visualize(environment, paths=[path], start=start, goal=goal)
         else:
             print("No path found.")
 
@@ -95,7 +109,7 @@ class Robot:
 
         start_time = time.time()
 
-        result = self.bfs_graph_search(environment, start, goal, visualize)
+        result = self.breadth_first_search(environment, start, goal, visualize)
         if result:
             path, visited = result
         else:
@@ -130,7 +144,6 @@ class Robot:
         """
         path_graph_search, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start_position, goal_position, visualize=True)
         self.move_robot_along_path(environment, start_position, goal_position, path_graph_search)
-        plt.show()
 
     def multiple_runs(self, num_runs):
         total_time = 0
@@ -195,9 +208,17 @@ class Robot:
                     return True
         return False
 
+    def is_valid(self, new_x, new_y, environment, radius):
+        return (
+            not self.within_radius((new_x, new_y), environment, radius)
+            and 0 <= new_x < len(environment) 
+            and 0 <= new_y < len(environment[0])
+            and environment[new_x][new_y] == 0
+        )
+
 if __name__ == "__main__":
     robot = Robot()
-    visualizing = False 
+    visualizing = True 
     random.seed()  # FOR REPRODUCIBILITY!
 
     # Single Run: Visualization
