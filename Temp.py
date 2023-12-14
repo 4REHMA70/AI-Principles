@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
-import Maze
+from maze import Maze
 import random
 import math
 import tracemalloc
@@ -141,8 +141,10 @@ if __name__ == "__main__":
         # start_position, goal_position = maze.set_start_and_goal(goal_and_start_spacing)
 
         # STATIC MAZE (comment above then uncomment this to set static)
-        maze = Maze.Maze(rows=10, cols=10, space_step=None, seed=45, remove_lone_blocks=False)
+        maze = Maze(rows=10, cols=10, space_step=None, seed=45, remove_lone_blocks=False)
+
         environment = maze.generate_maze(rand=0)
+        print(environment)
         start_position, goal_position = maze.set_start_and_goal(5)
 
         path_graph_search, execution_time, peak_memory = visualizer.run_search_algorithm(environment, start_position, goal_position, visualize=True)
