@@ -7,6 +7,7 @@ import math
 import tracemalloc
 import time
 import ui
+from config import *
 
 class Robot:
     def __init__(self):
@@ -14,52 +15,31 @@ class Robot:
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
-        self.ax.clear()
-        
-        # Convert the environment to a numeric data type
+        self.ax.clear()  
         environment = environment.astype(float)
+                
+        self.ax.imshow(environment, cmap='Greys', origin='upper')  
         
-        self.ax.imshow(environment, cmap='Greys', origin='upper')
-
         if paths:
+            
             for path in paths:
-                path = np.array(path).T
-                self.ax.plot(path[1], path[0], marker='o', color='gray', linestyle='--')
+                path = np.array(path)
+                self.ax.plot(path[:,1], path[:,0], marker='o', color='grey', linestyle='-.')
 
         if start:
-            self.ax.plot(start[1], start[0], marker='o', color='red', label='Start')
+            self.ax.plot(start[1], start[0], marker='h', color='blue', markersize=10, label='Start')
 
         if goal:
-            self.ax.plot(goal[1], goal[0], marker='o', color='green', label='Goal')
-
-        self.ax.legend()
+            self.ax.plot(goal[1], goal[0], marker='h', color='limegreen', markersize=10, label='Goal')
+        
+        self.ax.legend(loc='upper left', fontsize=8)   
+        
         plt.pause(0.2)
 
         # ui_display = ui.UserInterface(np.array(environment))
         # ui_display.run()
 
-    def get_next_steps(self, current, environment, visited, directions, step, radius):
-        next_steps = []
-        
-        for dx, dy in directions:
-            last = None
-            for i in range(1, step+1):
-                new_x, new_y = current[0] + i*dx, current[1] + i*dy
-                
-                if (new_x, new_y) in visited:
-                    continue
-                elif self.is_valid(new_x, new_y, environment, radius):
-                    visited.add(last)
-                    last = (new_x, new_y) 
-                else:
-                    break
-
-            if last:
-                next_steps.append(last)
-        
-        return next_steps
-
-    def breadth_first_search(self, environment, start, goal, visualize=True, radius=1, step=4):
+    def breadth_first_search(self, environment, start, goal, visualize=True, radius=RADIUS, action_step=ACTION_STEP):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
@@ -88,12 +68,12 @@ class Robot:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
             """
-            # Can test the step-code over here. Note: Step of the length of the maze is dangerous as it traverses in only that 
-            step, consequently sacrificing exploration. 66% solutions missed 
+            # Can test the action_step-code over here. Note: Step of the length of the maze is dangerous as it traverses in only that 
+            action_step, consequently sacrificing exploration. 66% solutions missed 
             """
 
-            for next_step in self.get_next_steps(current=current, environment=environment, visited=visited, directions=directions, step=step, radius=radius):
-                queue.append((next_step, path + [current])) # Appending only last to queue 
+            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, directions=directions, action_step=action_step, radius=radius):
+                queue.append((next_actions, path + [current])) # Appending only last values in each direction to queue 
                 
         return None
 
@@ -116,18 +96,14 @@ class Robot:
         # CAN ADD PATH TO RETURN
         return path, exec_time, current, peak, visited
     
-    def euclidean_distance(self, rows, cols):
-        distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
-        return math.floor(distance)
-
     def calculate_obstacle_density(self, maze_matrix):
         total_cells = len(maze_matrix) * len(maze_matrix[0])
         obstacle_cells = sum(row[1:-1].count(1) for row in maze_matrix[1:-1])
         density_percentage = (obstacle_cells/total_cells) * 100
         return density_percentage
 
-    def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing):
-        maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+    def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate=1):
+        maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
         environment = maze.generate_maze(rand=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
@@ -139,6 +115,9 @@ class Robot:
         if path is not None:
             for _ in path:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
+            plt.pause(2)
+            plt.close()
+
         else:
             print("No solution found!")
 
@@ -148,8 +127,8 @@ class Robot:
         solutions_count = 0
 
         for i in range(num_runs):
-            rows, cols, seed, cutting_rate, goal_and_start_spacing = self.generate_random_parameters()
-            maze = Maze(rows=rows, cols=cols, space_step=3, seed=seed, remove_lone_blocks=True)
+            rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.generate_random_parameters()
+            maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
             environment = maze.generate_maze(rand=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
             
@@ -160,7 +139,7 @@ class Robot:
             ax.set_title(f"Run {i + 1}")
             plt.pause(1)  # Pause for a short duration to display the plot
             """
-
+            
             density = self.calculate_obstacle_density(maze.matrix)
             path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualize=False)
 
@@ -186,8 +165,37 @@ class Robot:
         print()
         print(f"Total Number of runs: {num_runs}")
         print(f"Average Execution Time: {avg_time} seconds")
-        print(f"Average Peak Memory: {avg_memory / (1024 * 1024)} MB")
+        print(f"Average Peak Memory: {avg_memory/(1024 * 1024)} MB")
         print(f"Total Solutions: {solutions_count}")
+
+    def euclidean_distance(self, rows, cols):
+        distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
+        return math.floor(distance)
+
+    def get_next_actions(self, current, goal, environment, visited, directions, action_step, radius):
+        next_actions = []
+        
+        for dx, dy in directions:
+            last = None
+            for i in range(1, action_step+1):
+                new_x, new_y = current[0] + i*dx, current[1] + i*dy
+                
+                if (new_x, new_y) in visited: # If it was in visited, then skip
+                    continue
+                elif (new_x, new_y) == goal:
+                    visited.add(last)
+                    last = new_x, new_y
+                    break
+                elif self.is_valid(new_x, new_y, environment, radius) and (new_x, new_y) != goal: # Else if node valid, then add last and set as last node
+                    visited.add(last)
+                    last = (new_x, new_y) 
+                else:
+                    break
+
+            if last:
+                next_actions.append(last)
+        
+        return next_actions
 
     def generate_random_parameters(self):
         rows = random.randint(15, 40)
@@ -195,7 +203,8 @@ class Robot:
         seed = random.randint(1, 1000)
         cutting_rate = random.uniform(0.4, 0.85)
         goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
-        return rows, cols, seed, cutting_rate, goal_and_start_spacing
+        lone_blocks_rate = random.uniform(0.9,1)
+        return rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate
     
     def is_valid(self, new_x, new_y, environment, radius):
         radius -= 1
@@ -211,19 +220,17 @@ class Robot:
 
 if __name__ == "__main__":
     robot = Robot()
-    visualizing = True 
     random.seed()  # FOR REPRODUCIBILITY!
-
+    VISUALIZING = False
     # Single Run: Visualization
-    if visualizing:
-        # Static Parameters (comment and uncomment to select respective options)
-        # rows, cols, seed, cutting_rate, goal_and_start_spacing = 10, 10, 3, 0.5, 6
-
+    if VISUALIZING and not STATIC:
         # Random Parameters
-        rows, cols, seed, cutting_rate, goal_and_start_spacing = robot.generate_random_parameters()
+        rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
         
         robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing)
+    elif VISUALIZING and STATIC:
+        # Static Parameters
+        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE)
     else:
-        num_runs = 100
         # Multiple Runs: Average Scores
-        robot.multiple_runs(num_runs)
+        robot.multiple_runs(NUM_RUNS)

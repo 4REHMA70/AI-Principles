@@ -1,15 +1,16 @@
 import random
 import numpy as np
 import math
+from config import *
 #
 class Maze:
-    def __init__(self, rows, cols, space_step=None, seed=None, remove_lone_blocks=False):
+    def __init__(self, rows, cols, seed=None, lone_blocks_rate=None):
         self.rows = rows
         self.cols = cols
-        self.space_step = space_step
+        self.space_step = SPACE_STEP
         self.seed = seed
         self.matrix = [[1] * cols for _ in range(rows)]  # Initialize with walls. For each col in row, turn it into 1
-        self.remove_lone_blocks = remove_lone_blocks
+        self.lone_blocks_rate = lone_blocks_rate # IF STATIC LONEBLOCKS SET WHERE?
 
     def generate_maze(self, rand):
         random.seed(self.seed)  # Setting seed
@@ -45,7 +46,7 @@ class Maze:
                 stack.pop()  # Backtrack
         if self.space_step:
             self.spacing()
-        if self.remove_lone_blocks:
+        if self.lone_blocks_rate > 0:
             self.remove_isolated_blocks()
         return np.array(self.matrix)
 
@@ -57,10 +58,17 @@ class Maze:
 
     def spacing(self): 
         if self.space_step != 0: 
+            # Horizontal spacing
             for i in range(self.rows):
-                for j in range(self.space_step, self.cols - 1, self.space_step): # From space to the width with space as step rate
+                for j in range(self.space_step, self.cols - 1, self.space_step):
                     if self.matrix[i][j] == 0: 
-                        self.matrix[i][j - 1] = 0  
+                        self.matrix[i][j - 1] = 0
+
+            # Vertical spacing
+            for j in range(self.cols):
+                for i in range(self.space_step, self.rows - 1, self.space_step):
+                    if self.matrix[i][j] == 0: 
+                        self.matrix[i - 1][j] = 0
 
     def remove_isolated_blocks(self):
         rows, cols = len(self.matrix), len(self.matrix[0])
@@ -75,7 +83,7 @@ class Maze:
         removed = 0
         for r in range(1, rows-1):
             for c in range(1, cols-1):
-                if self.matrix[r][c] == 1 and not get_neighbors(r, c):
+                if self.matrix[r][c] == 1 and not get_neighbors(r, c) and random.random() < self.lone_blocks_rate:
                     self.matrix[r][c] = 0
                     removed += 1
 
@@ -126,7 +134,7 @@ class Maze:
                     return start, goal
 
 # if __name__ == "__main__":
-    # maze = Maze(rows=30, cols=30, space_step=3, seed=30, remove_lone_blocks=True) # Row, Col, and Seed specified here!
+    # maze = Maze(rows=30, cols=30, space_step=3, seed=30, lone_blocks_rate=True) # Row, Col, and Seed specified here!
     # maze.generate_maze(.45)
     # #maze.remove_isolated_blocks()
     # maze.print_maze()

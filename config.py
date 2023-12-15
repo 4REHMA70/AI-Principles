@@ -10,3 +10,32 @@ GROUND_IMAGES_LIST = ['assets/UI/map/ground/244_Floor.png', 'assets/UI/map/groun
                         'assets/UI/map/ground/266_Floor.png', 'assets/UI/map/ground/267_Floor.png',
                         'assets/UI/map/ground/268_Floor.png']
 WALL_IMAGE_LIST = ['assets/UI/map/obstacles/rock.png']
+
+
+#__________________________________________________________________
+# Main configuration
+
+VISUALIZING = True
+
+# If visualizing, static maze?
+STATIC = False
+
+# MAP CONFIG
+# If static, specify values (
+# dimensions,
+# seed for reproducibility, 
+# cutting rate for how often the walls are cut--between 0 and 1, 
+# the steps at which obstacles are removed from map to create space (2 or 3)
+# minimum spacing for goal and start
+# and rate at which lone blocks are removed (0-1) ):
+ROWS, COLS = 35,35 
+SEED  = 4
+CUTTING_RATE, LONE_BLOCKS_RATE = 0.5, 1
+SPACE_STEP, GOAL_AND_START_SPACING = 3, 6
+
+# ALGORITHM CONFIG
+# Step at which the action module's max range is to traverse, and radius
+ACTION_STEP, RADIUS = 1, 1
+
+# Number of runs if visualizing is off
+NUM_RUNS = 1000
