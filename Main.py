@@ -32,14 +32,14 @@ class Robot:
         if goal:
             self.ax.plot(goal[1], goal[0], marker='h', color='limegreen', markersize=10, label='Goal')
         
-        self.ax.legend(loc='upper left', fontsize=8)   
+        self.ax.legend(loc='upper left', fontsize=4)   
         
         plt.pause(0.2)
 
         # ui_display = ui.UserInterface(np.array(environment))
         # ui_display.run()
 
-    def breadth_first_search(self, environment, start, goal, visualize=True, radius=RADIUS, action_step=ACTION_STEP):
+    def breadth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=ACTION_STEP):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
@@ -54,7 +54,7 @@ class Robot:
 
             if current == goal or distance <= radius:
                 paths_explored.append(path + [current])
-                if visualize:
+                if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
@@ -64,7 +64,7 @@ class Robot:
             visited.add(current)
             paths_explored.append(path + [current])
 
-            if visualize:
+            if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
             """
@@ -77,12 +77,12 @@ class Robot:
                 
         return None
 
-    def run_search_algorithm(self, environment, start, goal, visualize=True):
+    def run_search_algorithm(self, environment, start, goal, visualizing):
         tracemalloc.start()
 
         start_time = time.time()
 
-        result = self.breadth_first_search(environment, start, goal, visualize)
+        result = self.breadth_first_search(environment, start, goal, visualizing)
         if result:
             path, visited = result
         else:
@@ -111,11 +111,11 @@ class Robot:
         environment=np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
         start, goal = (0,0), (3,3)
         """
-        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualize=True)
+        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True)
         if path is not None:
             for _ in path:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
-            plt.pause(2)
+            plt.pause(0.5)
             plt.close()
 
         else:
@@ -139,9 +139,8 @@ class Robot:
             ax.set_title(f"Run {i + 1}")
             plt.pause(1)  # Pause for a short duration to display the plot
             """
-            
             density = self.calculate_obstacle_density(maze.matrix)
-            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualize=False)
+            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=False)
 
             # Because path and visited may be None when radius too big to explore
             if path is not None and visited is not None:
@@ -221,7 +220,7 @@ class Robot:
 if __name__ == "__main__":
     robot = Robot()
     random.seed()  # FOR REPRODUCIBILITY!
-    VISUALIZING = False
+
     # Single Run: Visualization
     if VISUALIZING and not STATIC:
         # Random Parameters

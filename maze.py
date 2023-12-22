@@ -132,12 +132,3 @@ class Maze:
                 start, goal = random.sample(free_spaces, 2)
                 if math.dist(start,goal) >= min_distance: # If euclidean dist greater than or equal to min_distance. Else repeat random start,goal instantiation
                     return start, goal
-
-# if __name__ == "__main__":
-    # maze = Maze(rows=30, cols=30, space_step=3, seed=30, lone_blocks_rate=True) # Row, Col, and Seed specified here!
-    # maze.generate_maze(.45)
-    # #maze.remove_isolated_blocks()
-    # maze.print_maze()
-    # #maze.predefined_maze()
-    # maze.set_start_and_goal()
-    # #maze.print_maze()

@@ -1,3 +1,5 @@
+import math
+
 # UI configuration
 UI_WIDTH = 640
 UI_HEIGHT = 480
@@ -15,7 +17,7 @@ WALL_IMAGE_LIST = ['assets/UI/map/obstacles/rock.png']
 #__________________________________________________________________
 # Main configuration
 
-VISUALIZING = True
+VISUALIZING = False
 
 # If visualizing, static maze?
 STATIC = False
@@ -28,14 +30,17 @@ STATIC = False
 # the steps at which obstacles are removed from map to create space (2 or 3)
 # minimum spacing for goal and start
 # and rate at which lone blocks are removed (0-1) ):
-ROWS, COLS = 35,35 
+ROWS, COLS = 10,10 
 SEED  = 4
 CUTTING_RATE, LONE_BLOCKS_RATE = 0.5, 1
-SPACE_STEP, GOAL_AND_START_SPACING = 3, 6
+SPACE_STEP, GOAL_AND_START_SPACING = 3, 50
 
 # ALGORITHM CONFIG
 # Step at which the action module's max range is to traverse, and radius
-ACTION_STEP, RADIUS = 1, 1
+# Step currently at 5% of the length of the smaller dimension. Dynamic
+# ACTION_STEP = math.ceil(0.2*max(ROWS,COLS))
+ACTION_STEP = 3
+RADIUS = 1
 
 # Number of runs if visualizing is off
-NUM_RUNS = 1000
+NUM_RUNS = 100
