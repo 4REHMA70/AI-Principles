@@ -39,7 +39,7 @@ class Robot:
         # ui_display = ui.UserInterface(np.array(environment))
         # ui_display.run()
 
-    def breadth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=ACTION_STEP):
+    def breadth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
@@ -77,12 +77,12 @@ class Robot:
                 
         return None
 
-    def run_search_algorithm(self, environment, start, goal, visualizing):
+    def run_search_algorithm(self, environment, start, goal, visualizing, action_step):
         tracemalloc.start()
 
         start_time = time.time()
 
-        result = self.breadth_first_search(environment, start, goal, visualizing)
+        result = self.breadth_first_search(environment, start, goal, visualizing, action_step=action_step)
         if result:
             path, visited = result
         else:
@@ -102,7 +102,7 @@ class Robot:
         density_percentage = (obstacle_cells/total_cells) * 100
         return density_percentage
 
-    def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate=1):
+    def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate=1, action_step=3):
         maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
         environment = maze.generate_maze(rand=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
@@ -111,7 +111,8 @@ class Robot:
         environment=np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
         start, goal = (0,0), (3,3)
         """
-        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True)
+        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
+        
         if path is not None:
             for _ in path:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
@@ -131,7 +132,8 @@ class Robot:
             maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
             environment = maze.generate_maze(rand=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
-            
+            ACTION_STEP = math.ceil(0.3*max(rows,cols))        
+
             # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated
             """
             fig, ax = plt.subplots()
@@ -140,7 +142,7 @@ class Robot:
             plt.pause(1)  # Pause for a short duration to display the plot
             """
             density = self.calculate_obstacle_density(maze.matrix)
-            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=False)
+            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=False, action_step=ACTION_STEP)
 
             # Because path and visited may be None when radius too big to explore
             if path is not None and visited is not None:
@@ -225,8 +227,9 @@ if __name__ == "__main__":
     if VISUALIZING and not STATIC:
         # Random Parameters
         rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
-        
-        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing)
+        ACTION_STEP = math.ceil(0.3*max(rows,cols))        
+
+        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, ACTION_STEP)
     elif VISUALIZING and STATIC:
         # Static Parameters
         robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE)

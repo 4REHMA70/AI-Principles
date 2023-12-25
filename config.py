@@ -38,9 +38,9 @@ SPACE_STEP, GOAL_AND_START_SPACING = 3, 50
 # ALGORITHM CONFIG
 # Step at which the action module's max range is to traverse, and radius
 # Step currently at 5% of the length of the smaller dimension. Dynamic
-# ACTION_STEP = math.ceil(0.2*max(ROWS,COLS))
+
 ACTION_STEP = 3
 RADIUS = 1
 
 # Number of runs if visualizing is off
-NUM_RUNS = 100
+NUM_RUNS = 1000
