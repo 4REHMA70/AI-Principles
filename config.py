@@ -39,6 +39,8 @@ SPACE_STEP, GOAL_AND_START_SPACING = 3, 50
 # Step at which the action module's max range is to traverse, and radius
 # Step currently at 5% of the length of the smaller dimension. Dynamic
 ALGORITHM = 'a_star'
+# Can be 8d or 4d (latter not needed to be specified. Default)
+DIRECTIONS = '8d' 
 ACTION_STEP = 3
 RADIUS = 1
 

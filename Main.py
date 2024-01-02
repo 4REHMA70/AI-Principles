@@ -14,12 +14,11 @@ class Robot:
     def __init__(self, algorithm='bfs'):
         self.fig, self.ax = plt.subplots()
         self.algorithm = algorithm
-        # self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}
-        self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
-        # Using PriorityQueue later for UCS
-        if algorithm == 'ucs':
-            self.open_set = PriorityQueue()
         
+        if DIRECTIONS == '8d':
+            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
+        else:
+            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}        
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
@@ -116,6 +115,37 @@ class Robot:
                 
         return None
 
+    def uniform_cost_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
+        
+        open_set = PriorityQueue()
+        open_set.put((0, start, []))
+        closed_set = set()
+        paths_explored = []
+
+        while not open_set.empty():
+            cost, current, path = open_set.get()
+
+            if current == goal:
+                paths_explored.append(path + [current])  
+                if visualizing:
+                    self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+                return path + [current], closed_set
+
+            if current in closed_set:
+                continue
+                
+            closed_set.add(current)
+            paths_explored.append(path + [current])
+            
+            if visualizing:
+                self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+                
+            for next_node, action_cost in self.get_next_actions(current, environment, closed_set, action_step, radius):
+                new_cost = cost + action_cost  
+                open_set.put((new_cost, next_node, path + [current]))
+        
+        return None
+    
     def a_star_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
 
         open_set = [(start, 0, math.sqrt((goal[0] - start[0]) ** 2 + (goal[1] - start[1]) ** 2), [])]
@@ -141,10 +171,10 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=closed_set, action_step=action_step, radius=radius):
-                new_cost = cost + 1 
+            for next_action, next_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=closed_set, action_step=action_step, radius=radius):
+                new_cost = cost + next_cost
                 heuristic_value = math.sqrt((goal[0] - current[0]) ** 2 + (goal[1] - current[1]) ** 2)
-                open_set.append((next_actions, new_cost, heuristic_value, path + [current]))
+                open_set.append((next_action, new_cost, heuristic_value, path + [current]))
 
         return None
 
@@ -159,6 +189,8 @@ class Robot:
             result = self.depth_first_search(environment, start, goal, visualizing, action_step=action_step)
         elif self.algorithm=='a_star':
             result = self.a_star_search(environment, start, goal, visualizing, action_step=action_step)
+        elif self.algorithm=='ucs':
+            result = self.uniform_cost_search(environment, start, goal, visualizing, action_step=action_step)
 
         if result:
             path, visited = result
@@ -252,13 +284,12 @@ class Robot:
 
     def get_next_actions(self, current, goal, environment, visited, action_step, radius):
         next_actions = []
+        next_costs = []
 
         for dx, dy in self.directions_cost:
             last = None
             cost = self.directions_cost[(dx, dy)] 
-            """
-            TO IMPLEMENT. WILL WORK ON COST FOR DIRECTIONS LATER, FOR UCS
-            """
+
             for i in range(1, action_step + 1):
                 new_x, new_y = current[0] + i * dx, current[1] + i * dy
 
@@ -276,8 +307,9 @@ class Robot:
 
             if last:
                 next_actions.append(last)
+                next_costs.append(cost)
 
-        return next_actions
+        return zip(next_actions, next_costs)
 
     def generate_random_parameters(self):
         rows = random.randint(15, 40)
