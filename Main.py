@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 from maze import Maze
+from queue import PriorityQueue
 import random
 import math
 import tracemalloc
@@ -10,8 +11,15 @@ import ui
 from config import *
 
 class Robot:
-    def __init__(self):
+    def __init__(self, algorithm='bfs'):
         self.fig, self.ax = plt.subplots()
+        self.algorithm = algorithm
+        # self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}
+        self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
+        # Using PriorityQueue later for UCS
+        if algorithm == 'ucs':
+            self.open_set = PriorityQueue()
+        
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
@@ -39,8 +47,39 @@ class Robot:
         # ui_display = ui.UserInterface(np.array(environment))
         # ui_display.run()
 
+    def depth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
+
+        stack = [(start, [])]
+        paths_explored = []
+        visited = set()
+
+        while stack:
+            current, path = stack.pop()
+            goal_x, goal_y = goal
+            current_x, current_y = current
+            distance = math.sqrt((goal_x - current_x) ** 2 + (goal_y - current_y) ** 2)
+
+            if current == goal or distance <= radius:
+                paths_explored.append(path + [current])
+                if visualizing:
+                    self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+                return path + [current], visited
+
+            if current in visited:
+                continue
+
+            visited.add(current)
+            paths_explored.append(path + [current])
+
+            if visualizing:
+                self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+
+            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
+                stack.append((next_actions, path + [current]))
+
+        return None
+
     def breadth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         queue = deque([(start, [])])
         paths_explored = []
@@ -72,9 +111,41 @@ class Robot:
             action_step, consequently sacrificing exploration. 66% solutions missed 
             """
 
-            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, directions=directions, action_step=action_step, radius=radius):
+            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
                 queue.append((next_actions, path + [current])) # Appending only last values in each direction to queue 
                 
+        return None
+
+    def a_star_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
+
+        open_set = [(start, 0, math.sqrt((goal[0] - start[0]) ** 2 + (goal[1] - start[1]) ** 2), [])]
+        closed_set = set()
+        paths_explored = []
+
+        while open_set:
+            open_set.sort(key=lambda x: x[1] + x[2])  # Sorting by cost + heuristic
+            current, cost, _, path = open_set.pop(0)
+
+            if current == goal:
+                paths_explored.append(path + [current])
+                if visualizing:
+                    self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+                return path + [current], closed_set
+
+            if current in closed_set:
+                continue
+
+            closed_set.add(current)
+            paths_explored.append(path + [current])
+
+            if visualizing:
+                self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+
+            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=closed_set, action_step=action_step, radius=radius):
+                new_cost = cost + 1 
+                heuristic_value = math.sqrt((goal[0] - current[0]) ** 2 + (goal[1] - current[1]) ** 2)
+                open_set.append((next_actions, new_cost, heuristic_value, path + [current]))
+
         return None
 
     def run_search_algorithm(self, environment, start, goal, visualizing, action_step):
@@ -82,7 +153,13 @@ class Robot:
 
         start_time = time.time()
 
-        result = self.breadth_first_search(environment, start, goal, visualizing, action_step=action_step)
+        if self.algorithm=='bfs':
+            result = self.breadth_first_search(environment, start, goal, visualizing, action_step=action_step)
+        elif self.algorithm=='dfs':
+            result = self.depth_first_search(environment, start, goal, visualizing, action_step=action_step)
+        elif self.algorithm=='a_star':
+            result = self.a_star_search(environment, start, goal, visualizing, action_step=action_step)
+
         if result:
             path, visited = result
         else:
@@ -173,29 +250,33 @@ class Robot:
         distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
         return math.floor(distance)
 
-    def get_next_actions(self, current, goal, environment, visited, directions, action_step, radius):
+    def get_next_actions(self, current, goal, environment, visited, action_step, radius):
         next_actions = []
-        
-        for dx, dy in directions:
+
+        for dx, dy in self.directions_cost:
             last = None
-            for i in range(1, action_step+1):
-                new_x, new_y = current[0] + i*dx, current[1] + i*dy
-                
-                if (new_x, new_y) in visited: # If it was in visited, then skip
+            cost = self.directions_cost[(dx, dy)] 
+            """
+            TO IMPLEMENT. WILL WORK ON COST FOR DIRECTIONS LATER, FOR UCS
+            """
+            for i in range(1, action_step + 1):
+                new_x, new_y = current[0] + i * dx, current[1] + i * dy
+
+                if (new_x, new_y) in visited:  # If it was in visited, then skip
                     continue
                 elif (new_x, new_y) == goal:
                     visited.add(last)
                     last = new_x, new_y
                     break
-                elif self.is_valid(new_x, new_y, environment, radius) and (new_x, new_y) != goal: # Else if node valid, then add last and set as last node
+                elif self.is_valid(new_x, new_y, environment, radius) and (new_x, new_y) != goal:
                     visited.add(last)
-                    last = (new_x, new_y) 
+                    last = (new_x, new_y)
                 else:
                     break
 
             if last:
                 next_actions.append(last)
-        
+
         return next_actions
 
     def generate_random_parameters(self):
@@ -220,19 +301,19 @@ class Robot:
         )
 
 if __name__ == "__main__":
-    robot = Robot()
+    robot = Robot(ALGORITHM)
     random.seed()  # FOR REPRODUCIBILITY!
 
     # Single Run: Visualization
     if VISUALIZING and not STATIC:
         # Random Parameters
         rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
-        ACTION_STEP = math.ceil(0.3*max(rows,cols))        
+        # ACTION_STEP = math.ceil(0.3*max(rows,cols))        
 
         robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, ACTION_STEP)
     elif VISUALIZING and STATIC:
         # Static Parameters
-        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE)
+        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=ACTION_STEP)
     else:
         # Multiple Runs: Average Scores
         robot.multiple_runs(NUM_RUNS)
