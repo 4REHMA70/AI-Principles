@@ -18,7 +18,7 @@ class Robot:
         if DIRECTIONS == '8d':
             self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
         else:
-            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}        
+            self.directions_cost = {(-1, 0): 5, (1, 0): 1, (0, -1): 5, (0, 1): 1}        
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
@@ -119,7 +119,7 @@ class Robot:
         
         open_set = PriorityQueue()
         open_set.put((0, start, []))
-        closed_set = set()
+        visited = set()
         paths_explored = []
 
         while not open_set.empty():
@@ -129,18 +129,18 @@ class Robot:
                 paths_explored.append(path + [current])  
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
-                return path + [current], closed_set
+                return path + [current], visited
 
-            if current in closed_set:
+            if current in visited:
                 continue
                 
-            closed_set.add(current)
+            visited.add(current)
             paths_explored.append(path + [current])
             
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
-                
-            for next_node, action_cost in self.get_next_actions(current, environment, closed_set, action_step, radius):
+                # current, goal, environment, visited, action_step, radius
+            for next_node, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
                 new_cost = cost + action_cost  
                 open_set.put((new_cost, next_node, path + [current]))
         
@@ -149,7 +149,7 @@ class Robot:
     def a_star_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
 
         open_set = [(start, 0, math.sqrt((goal[0] - start[0]) ** 2 + (goal[1] - start[1]) ** 2), [])]
-        closed_set = set()
+        visited = set()
         paths_explored = []
 
         while open_set:
@@ -160,19 +160,19 @@ class Robot:
                 paths_explored.append(path + [current])
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
-                return path + [current], closed_set
+                return path + [current], visited
 
-            if current in closed_set:
+            if current in visited:
                 continue
 
-            closed_set.add(current)
+            visited.add(current)
             paths_explored.append(path + [current])
 
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_action, next_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=closed_set, action_step=action_step, radius=radius):
-                new_cost = cost + next_cost
+            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
+                new_cost = cost + action_cost
                 heuristic_value = math.sqrt((goal[0] - current[0]) ** 2 + (goal[1] - current[1]) ** 2)
                 open_set.append((next_action, new_cost, heuristic_value, path + [current]))
 
@@ -217,8 +217,8 @@ class Robot:
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
         # Test to prove that the radius checking for goal works 
-        environment=np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
-        start, goal = (0,0), (3,3)
+        environment=np.zeros((30,30), dtype=int)
+        start, goal = (14,14), (29,29)
         """
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
@@ -284,7 +284,7 @@ class Robot:
 
     def get_next_actions(self, current, goal, environment, visited, action_step, radius):
         next_actions = []
-        next_costs = []
+        action_costs = []
 
         for dx, dy in self.directions_cost:
             last = None
@@ -307,9 +307,9 @@ class Robot:
 
             if last:
                 next_actions.append(last)
-                next_costs.append(cost)
+                action_costs.append(cost)
 
-        return zip(next_actions, next_costs)
+        return zip(next_actions, action_costs)
 
     def generate_random_parameters(self):
         rows = random.randint(15, 40)
@@ -341,8 +341,8 @@ if __name__ == "__main__":
         # Random Parameters
         rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
         # ACTION_STEP = math.ceil(0.3*max(rows,cols))        
+        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=ACTION_STEP)
 
-        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, ACTION_STEP)
     elif VISUALIZING and STATIC:
         # Static Parameters
         robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=ACTION_STEP)
