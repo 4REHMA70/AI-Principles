@@ -17,8 +17,8 @@ class Robot:
         
         if DIRECTIONS == '8d':
             self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
-        else:
-            self.directions_cost = {(-1, 0): 5, (1, 0): 1, (0, -1): 5, (0, 1): 1}        
+        else: 
+            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
@@ -53,10 +53,11 @@ class Robot:
         visited = set()
 
         while stack:
-            current, path = stack.pop()
-            goal_x, goal_y = goal
+            current, path = stack.pop() 
             current_x, current_y = current
-            distance = math.sqrt((goal_x - current_x) ** 2 + (goal_y - current_y) ** 2)
+
+            goal_x, goal_y = goal  
+            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
 
             if current == goal or distance <= radius:
                 paths_explored.append(path + [current])
@@ -73,11 +74,12 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
-                stack.append((next_actions, path + [current]))
+                
+            for next_action, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
+                stack.append((next_action, path + [current]))
 
         return None
-
+    
     def breadth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
 
         queue = deque([(start, [])])
@@ -110,8 +112,8 @@ class Robot:
             action_step, consequently sacrificing exploration. 66% solutions missed 
             """
 
-            for next_actions in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
-                queue.append((next_actions, path + [current])) # Appending only last values in each direction to queue 
+            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
+                queue.append((next_action, path + [current])) # Appending only last values in each direction to queue 
                 
         return None
 
@@ -191,6 +193,9 @@ class Robot:
             result = self.a_star_search(environment, start, goal, visualizing, action_step=action_step)
         elif self.algorithm=='ucs':
             result = self.uniform_cost_search(environment, start, goal, visualizing, action_step=action_step)
+        else:
+            print('Invalid algorithm name. Valid names are: bfs, dfs, a_star, ucs')
+            result = None
 
         if result:
             path, visited = result
