@@ -6,6 +6,7 @@ from queue import PriorityQueue
 import random
 import math
 import tracemalloc
+import seaborn as sns
 import time
 import ui
 from config import *
@@ -240,6 +241,9 @@ class Robot:
         total_time = 0
         total_memory = 0
         solutions_count = 0
+        all_exec_times = []
+        all_peak_memories = []
+
 
         for i in range(num_runs):
             rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.generate_random_parameters()
@@ -263,6 +267,9 @@ class Robot:
                 path_to_spacing_ratio = len(path)/goal_and_start_spacing # The smaller, the better (generally)
                 search_space_coverage = len(visited)/(rows*cols)
                 solutions_count += 1            
+                all_exec_times.append(exec_time)
+                all_peak_memories.append(peak_memory)
+
             else:
                 path_to_spacing_ratio = None # For when there's no path due to radius size
                 search_space_coverage = 0
@@ -273,7 +280,22 @@ class Robot:
             for label, value in zip(["rows", "cols", "seed", "cutting_rate", "path", "goal_and_start_spacing", "density", "path_to_spacing_ratio", "search_space_coverage (%)"], array):
                 print(f"{label}: {value}")
             print()
-            # OTHER POTENTIAL PERFORMANCE VALUES: BRANCHING FACTOR
+            
+        # Distribution plot for execution time
+        plt.figure(figsize=(10, 5))
+        sns.histplot(all_exec_times, kde=True, color='skyblue', bins=20)
+        plt.title('Distribution of Execution Time')
+        plt.xlabel('Execution Time (seconds)')
+        plt.ylabel('Frequency')
+        plt.show()
+
+        # Distribution plot for peak memory
+        plt.figure(figsize=(10, 5))
+        sns.histplot(all_peak_memories, kde=True, color='salmon', bins=20)
+        plt.title('Distribution of Peak Memory')
+        plt.xlabel('Peak Memory (MB)')
+        plt.ylabel('Frequency')
+        plt.show()
 
         avg_time = total_time/num_runs
         avg_memory = total_memory/num_runs
