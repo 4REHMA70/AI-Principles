@@ -10,16 +10,20 @@ import seaborn as sns
 import time
 import ui
 from config import *
+import sys
+
 
 class Robot:
-    def __init__(self, algorithm='bfs'):
+    def __init__(self, algorithm='bfs', directions='8d', action_step=3):
         self.fig, self.ax = plt.subplots()
         self.algorithm = algorithm
         
-        if DIRECTIONS == '8d':
+        if directions == '8d':
             self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
         else: 
             self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}
+
+        self.action_step = action_step
 
     def visualize(self, environment, paths=None, start=None, goal=None):
         
@@ -181,6 +185,49 @@ class Robot:
 
         return None
 
+    def iterative_deepening_search(self, environment, start, goal, visualizing, radius=RADIUS, max_depth=1000, action_step=3):
+        for depth in range(max_depth+1):
+            result = self.depth_limited_search(environment, start, goal, visualizing, radius, depth, action_step)
+            if result:
+                return result
+
+        return None
+
+    def depth_limited_search(self, environment, start, goal, visualizing, radius, depth_limit, action_step=3):
+        # Exact same logic but follows until distance reaches depth limit. Difference is this function is called iteratively till max depth in IDS
+        stack = [(start, [])]
+        paths_explored = []
+        visited = set()
+
+        while stack:
+            current, path = stack.pop()
+            current_x, current_y = current
+
+            goal_x, goal_y = goal
+
+            # distance = math.hypot((goal_x - current_x), (goal_y - current_y))
+            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
+
+            if current == goal or distance <= depth_limit:
+                paths_explored.append(path + [current])
+                if visualizing:
+                    self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+                return path + [current], visited
+
+            if current in visited or len(path)>= depth_limit:
+                continue
+
+            visited.add(current)
+            paths_explored.append(path + [current])
+
+            if visualizing:
+                self.visualize(environment, paths=paths_explored, start=start, goal=goal)
+            # Action cost isn't used, so excluded
+            for next_action, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
+                stack.append((next_action, path + [current]))
+
+        return None
+
     def run_search_algorithm(self, environment, start, goal, visualizing, action_step):
         tracemalloc.start()
 
@@ -194,6 +241,8 @@ class Robot:
             result = self.a_star_search(environment, start, goal, visualizing, action_step=action_step)
         elif self.algorithm=='ucs':
             result = self.uniform_cost_search(environment, start, goal, visualizing, action_step=action_step)
+        elif self.algorithm=='ids':
+            result = self.iterative_deepening_search(environment, start, goal, visualizing, action_step=action_step)
         else:
             print('Invalid algorithm name. Valid names are: bfs, dfs, a_star, ucs')
             result = None
@@ -243,6 +292,11 @@ class Robot:
         solutions_count = 0
         all_exec_times = []
         all_peak_memories = []
+        all_path_to_spacing_ratios = []
+        all_search_space_coverages = []
+
+        # outfile = open('output.log', 'w')
+        # sys.stdout = outfile
 
 
         for i in range(num_runs):
@@ -269,6 +323,8 @@ class Robot:
                 solutions_count += 1            
                 all_exec_times.append(exec_time)
                 all_peak_memories.append(peak_memory)
+                all_path_to_spacing_ratios.append(path_to_spacing_ratio)
+                all_search_space_coverages.append(search_space_coverage)
 
             else:
                 path_to_spacing_ratio = None # For when there's no path due to radius size
@@ -276,26 +332,11 @@ class Robot:
 
             total_time += exec_time
             total_memory += peak_memory
+            print('\n',i)
+
             array = [rows, cols, seed, cutting_rate, path, goal_and_start_spacing, density, path_to_spacing_ratio, search_space_coverage*100]
             for label, value in zip(["rows", "cols", "seed", "cutting_rate", "path", "goal_and_start_spacing", "density", "path_to_spacing_ratio", "search_space_coverage (%)"], array):
                 print(f"{label}: {value}")
-            print()
-            
-        # Distribution plot for execution time
-        plt.figure(figsize=(10, 5))
-        sns.histplot(all_exec_times, kde=True, color='skyblue', bins=20)
-        plt.title('Distribution of Execution Time')
-        plt.xlabel('Execution Time (seconds)')
-        plt.ylabel('Frequency')
-        plt.show()
-
-        # Distribution plot for peak memory
-        plt.figure(figsize=(10, 5))
-        sns.histplot(all_peak_memories, kde=True, color='salmon', bins=20)
-        plt.title('Distribution of Peak Memory')
-        plt.xlabel('Peak Memory (MB)')
-        plt.ylabel('Frequency')
-        plt.show()
 
         avg_time = total_time/num_runs
         avg_memory = total_memory/num_runs
@@ -303,7 +344,28 @@ class Robot:
         print(f"Total Number of runs: {num_runs}")
         print(f"Average Execution Time: {avg_time} seconds")
         print(f"Average Peak Memory: {avg_memory/(1024 * 1024)} MB")
+        print(f"Average Path to Spacing Ratio: {np.mean(all_path_to_spacing_ratios)}")
+        print(f"Average Search Space Coverage: {np.mean(all_search_space_coverages)}")
         print(f"Total Solutions: {solutions_count}")
+
+        # Distribution plot for execution time
+        plt.figure(figsize=(10, 5))
+        sns.histplot(all_exec_times, kde=True, color='skyblue', bins=20)
+        plt.title(f'Distribution of Execution Time for {robot.algorithm}')
+        plt.xlabel('Execution Time (seconds)')
+        plt.ylabel('Frequency')
+        plt.show()
+
+        # Distribution plot for peak memory
+        plt.figure(figsize=(10, 5))
+        sns.histplot(all_peak_memories, kde=True, color='salmon', bins=20)
+        plt.title(f'Distribution of Peak Memory for {robot.algorithm}')
+        plt.xlabel('Peak Memory (MB)')
+        plt.ylabel('Frequency')
+        plt.show()
+
+        
+        # outfile.close()
 
     def euclidean_distance(self, rows, cols):
         distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
@@ -360,19 +422,19 @@ class Robot:
         )
 
 if __name__ == "__main__":
-    robot = Robot(ALGORITHM)
+    robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP)
     random.seed()  # FOR REPRODUCIBILITY!
 
     # Single Run: Visualization
     if VISUALIZING and not STATIC:
         # Random Parameters
         rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
-        # ACTION_STEP = math.ceil(0.3*max(rows,cols))        
-        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=ACTION_STEP)
+        # ACTION_STEP = math.ceil(0.3*max(rows,cols))
+        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=robot.action_step)
 
     elif VISUALIZING and STATIC:
         # Static Parameters
-        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=ACTION_STEP)
+        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=robot.action_step)
     else:
         # Multiple Runs: Average Scores
         robot.multiple_runs(NUM_RUNS)
