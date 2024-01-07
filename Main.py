@@ -297,10 +297,14 @@ class Robot:
 
         # outfile = open('output.log', 'w')
         # sys.stdout = outfile
-
+        """
+        Sometimes output will buffer or stop. This is not an error
+        Have tried try and except, batch and parallel processing, outputs in a log file instead of printing, flushing and time.sleep, etc.
+        Will just have to re-run.
+        """
 
         for i in range(num_runs):
-            rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.generate_random_parameters()
+            rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.get_random_parameters()
             maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
             environment = maze.generate_maze(rand=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
@@ -334,8 +338,8 @@ class Robot:
             total_memory += peak_memory
             print('\n',i)
 
-            array = [rows, cols, seed, cutting_rate, path, goal_and_start_spacing, density, path_to_spacing_ratio, search_space_coverage*100]
-            for label, value in zip(["rows", "cols", "seed", "cutting_rate", "path", "goal_and_start_spacing", "density", "path_to_spacing_ratio", "search_space_coverage (%)"], array):
+            array = [rows, cols, seed, cutting_rate, path, lone_blocks_rate, goal_and_start_spacing, density, path_to_spacing_ratio, search_space_coverage*100]
+            for label, value in zip(["rows", "cols", "seed", "cutting_rate", "path", "lone_blocks_rate", "goal_and_start_spacing", "density", "path_to_spacing_ratio", "search_space_coverage (%)"], array):
                 print(f"{label}: {value}")
 
         avg_time = total_time/num_runs
@@ -363,7 +367,6 @@ class Robot:
         plt.xlabel('Peak Memory (MB)')
         plt.ylabel('Frequency')
         plt.show()
-
         
         # outfile.close()
 
@@ -400,9 +403,10 @@ class Robot:
 
         return zip(next_actions, action_costs)
 
-    def generate_random_parameters(self):
-        rows = random.randint(15, 40)
-        cols = random.randint(15, 40)
+    def get_random_parameters(self):
+        rows = random.randint(15, 30)
+        cols = random.randint(15, 30)
+        # HIGH ROWS AND COLS HERE LIKE 40 QUADRATICALLY INCR. SEARCH SPACE. STOPS OUTPUT
         seed = random.randint(1, 1000)
         cutting_rate = random.uniform(0.4, 0.85)
         goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
@@ -428,7 +432,7 @@ if __name__ == "__main__":
     # Single Run: Visualization
     if VISUALIZING and not STATIC:
         # Random Parameters
-        rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.generate_random_parameters()
+        rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.get_random_parameters()
         # ACTION_STEP = math.ceil(0.3*max(rows,cols))
         robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=robot.action_step)
 

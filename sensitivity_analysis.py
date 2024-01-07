@@ -13,7 +13,9 @@ def sensitivity_analysis(robot, varied_params, fixed_params, num_runs):
 
         for algorithm in ['ids', 'bfs', 'dfs', 'a_star', 'ucs']:
             robot.algorithm = algorithm
-            print(varied_params.items())
+            print('___________________________________________')
+            print(algorithm.upper())
+            print('___________________________________________\n')
             for param_name, values_to_try in varied_params.items():
                 all_exec_times = []
                 all_peak_memories = []
@@ -78,7 +80,7 @@ varied_params = {
     "cutting_rate": [0.1, 0.3, 0.5, 0.7, 0.9],
     "lone_blocks_rate": [0.1, 0.3, 0.5, 0.7, 0.9, 0.95],
     "directions": ['8d', '4d'],
-    "action_step": [1, 2, 3],
+    "action_step": [1, 2, 3, 10],
     "radius": [1, 2]
 }
 
@@ -90,24 +92,22 @@ sensitivity_analysis(robot, varied_params, fixed_params, num_runs)
 
 """
 Cutting Rate:
-
 UCS and BFS: Increasing cutting_rate generally leads to a decrease in average execution time but an increase in standard deviation.
 DFS and A:* The influence is less pronounced in A*, but increasing cutting_rate still results in a decrease in average execution time with an increase in standard deviation.
-Lone Blocks Rate:
 
+Lone Blocks Rate:
 UCS: The effect is not very significant.
 BFS and DFS: Lower lone_blocks_rate tends to result in lower average execution time with a moderate increase in standard deviation.
 A:* Lower lone_blocks_rate tends to result in lower average execution time with a moderate increase in standard deviation.
+
 Directions:
-
 UCS, BFS, DFS, and A:* '8d' generally performs better than '4d' in terms of both average execution time and standard deviation.
+
 Action Step:
+UCS, BFS, DFS, and A:* Smaller action_step tends to result in better performance for all algorithms. A* stands out as having lower and relatively stable values across different action steps. 
 
-UCS, BFS, DFS, and A:* Smaller action_step tends to result in better performance for all algorithms.
 Radius:
-
 UCS, BFS, DFS, and A:* The radius parameter does not seem to strongly influence the performance of any of the algorithms.
-
 
 
 For ucs and bfs, the cutting_rate and lone_blocks_rate parameters have the largest impact on execution time and memory usage variability. The coefficients of variation for those parameters are much higher than other parameters.
