@@ -28,7 +28,7 @@ class Robot:
     def visualize(self, environment, paths=None, start=None, goal=None):
         
         self.ax.clear()  
-        environment = environment.astype(float)
+        environment = np.array(environment, dtype=float)
                 
         self.ax.imshow(environment, cmap='Greys', origin='upper')  
         
@@ -59,12 +59,9 @@ class Robot:
 
         while stack:
             current, path = stack.pop() 
-            current_x, current_y = current
+            distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
 
-            goal_x, goal_y = goal  
-            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
-
-            if current == goal or distance <= radius:
+            if current == goal or distance < radius:
                 paths_explored.append(path + [current])
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
@@ -93,11 +90,10 @@ class Robot:
 
         while queue:
             current, path = queue.popleft()
-            goal_x, goal_y = goal
-            current_x, current_y = current
-            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
+            
+            distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
 
-            if current == goal or distance <= radius:
+            if current == goal or distance < radius:
                 paths_explored.append(path + [current])
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
@@ -180,7 +176,13 @@ class Robot:
 
             for next_action, action_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
                 new_cost = cost + action_cost
-                heuristic_value = math.sqrt((goal[0] - current[0]) ** 2 + (goal[1] - current[1]) ** 2)
+
+                # Euclidean Distance
+                # heuristic_value = math.sqrt((goal[0] - current[0]) ** 2 + (goal[1] - current[1]) ** 2)
+
+                # Manhattan Distance
+                heuristic_value = abs(goal[0] - current[0]) + abs(goal[1] - current[1])  
+
                 open_set.append((next_action, new_cost, heuristic_value, path + [current]))
 
         return None
@@ -201,14 +203,11 @@ class Robot:
 
         while stack:
             current, path = stack.pop()
-            current_x, current_y = current
 
-            goal_x, goal_y = goal
+            distance = math.hypot((goal[0] - current[0]), (goal[1] - current[1]))
+            # distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
 
-            # distance = math.hypot((goal_x - current_x), (goal_y - current_y))
-            distance = math.sqrt((goal_x - current_x)**2 + (goal_y - current_y)**2)
-
-            if current == goal or distance <= depth_limit:
+            if current == goal or distance < radius:
                 paths_explored.append(path + [current])
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
@@ -273,7 +272,13 @@ class Robot:
         """
         # Test to prove that the radius checking for goal works 
         environment=np.zeros((30,30), dtype=int)
-        start, goal = (14,14), (29,29)
+        environment[:1, :] = 1
+        environment[-1:, :] = 1
+        environment[:, :1] = 1
+        environment[:, -1:] = 1
+        environment[28,27], environment[27,28] = 1, 1
+        action_step = 1
+        start, goal = (27,27), (28,28) # Change start to (14,14)
         """
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
@@ -282,6 +287,7 @@ class Robot:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
             plt.pause(0.5)
             plt.close()
+            print("Path found!")
 
         else:
             print("No solution found!")
@@ -308,6 +314,7 @@ class Robot:
             maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
             environment = maze.generate_maze(rand=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
+            # Can comment out if wanting a static action step
             ACTION_STEP = math.ceil(0.3*max(rows,cols))        
 
             # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated
@@ -377,23 +384,27 @@ class Robot:
     def get_next_actions(self, current, goal, environment, visited, action_step, radius):
         next_actions = []
         action_costs = []
+        diagonals = {(-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
 
-        for dx, dy in self.directions_cost:
+        for direction in self.directions_cost:
             last = None
-            cost = self.directions_cost[(dx, dy)] 
+            cost = self.directions_cost[(direction)] 
 
             for i in range(1, action_step + 1):
-                new_x, new_y = current[0] + i * dx, current[1] + i * dy
+                new_node = current[0] + i * direction[0], current[1] + i * direction[1]
+                if direction in diagonals:
+                    new_node_adjacent_block1 = (new_node[0] - direction[0], new_node[1] + direction[1])
+                    new_node_adjacent_block2 = (new_node[0] + direction[0], new_node[1] - direction[1])
 
-                if (new_x, new_y) in visited:  # If it was in visited, then skip
-                    continue
-                elif (new_x, new_y) == goal:
+                    if ((new_node_adjacent_block1 == 1 or new_node_adjacent_block2 == 1) and math.hypot(new_node_adjacent_block1, new_node_adjacent_block2)<radius) or new_node in visited:
+                        continue
+                elif (new_node) == goal:
                     visited.add(last)
-                    last = new_x, new_y
+                    last = new_node
                     break
-                elif self.is_valid(new_x, new_y, environment, radius) and (new_x, new_y) != goal:
+                elif self.is_valid(new_node, environment, radius) and (new_node) != goal:
                     visited.add(last)
-                    last = (new_x, new_y)
+                    last = (new_node)
                 else:
                     break
 
@@ -409,25 +420,30 @@ class Robot:
         # HIGH ROWS AND COLS HERE LIKE 40 QUADRATICALLY INCR. SEARCH SPACE. STOPS OUTPUT
         seed = random.randint(1, 1000)
         cutting_rate = random.uniform(0.4, 0.85)
-        goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
+        # goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
+        # SOMETIMES GOAL START SPACING IS PROBLEMATIC
+        goal_and_start_spacing = 10
         lone_blocks_rate = random.uniform(0.9,1)
         return rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate
     
-    def is_valid(self, new_x, new_y, environment, radius):
+    def is_valid(self, new_node, environment, radius):
         radius -= 1
-        for i in range(max(0, new_x-radius), min(len(environment), new_x+radius+1)):
-            for j in range(max(0, new_y-radius), min(len(environment[0]), new_y+radius+1)):
+        for i in range(max(0, new_node[0]-radius), min(len(environment), new_node[0]+radius+1)):
+            for j in range(max(0, new_node[1]-radius), min(len(environment[0]), new_node[1]+radius+1)):
                 if environment[i][j] == 1:
                     return False 
         return (
-            0 <= new_x < len(environment) 
-            and 0 <= new_y < len(environment[0])
-            and environment[new_x][new_y] == 0
+            0 <= new_node[0] < len(environment) 
+            and 0 <= new_node[1] < len(environment[0])
+            and environment[new_node[0]][new_node[1]] == 0
         )
 
 if __name__ == "__main__":
     robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP)
     random.seed()  # FOR REPRODUCIBILITY!
+
+    if (RADIUS < 1) or (GOAL_AND_START_SPACING > min(ROWS, COLS)):
+        print("Error: Change values. RADIUS > 1, and GOAL_AND_START_SPACING > the smaller of ROWS and COLS")
 
     # Single Run: Visualization
     if VISUALIZING and not STATIC:
