@@ -270,16 +270,16 @@ class Robot:
         environment = maze.generate_maze(rand=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
-        # Test to prove that the radius checking for goal works 
-        environment=np.zeros((30,30), dtype=int)
+        # Test to prove that the radius checking for goal works. Or to prove that it can't cut corners!
+        environment=np.zeros((2,2), dtype=int)
         environment[:1, :] = 1
         environment[-1:, :] = 1
         environment[:, :1] = 1
         environment[:, -1:] = 1
-        environment[28,27], environment[27,28] = 1, 1
+        environment[0,1], environment[1,0] = 1, 1
         action_step = 1
-        start, goal = (27,27), (28,28) # Change start to (14,14)
-        """
+        start, goal = (1,1), (0,0) # Change start to (14,14)
+     """
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
         if path is not None:
@@ -384,29 +384,51 @@ class Robot:
     def get_next_actions(self, current, goal, environment, visited, action_step, radius):
         next_actions = []
         action_costs = []
-        diagonals = {(-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
+        diagonals = {
+            (-1, -1): ((1, 0), (0, 1)), # Down-Left, adjacent blocks: Up, Right
+            
+            (-1, 1): ((1, 0), (0, -1)), # Up-Left, adjacent blocks: Down, Right
+            
+            (1, -1): ((-1, 0), (0, 1)), # Down-Right, adjacent blocks: Up, Left
+            
+            (1, 1): ((-1, 0), (0, -1)) # Up-Right, adjacent blocks: Down, Left
+        }        
+        skip_direction = False
 
         for direction in self.directions_cost:
             last = None
-            cost = self.directions_cost[(direction)] 
+            cost = self.directions_cost[direction]
 
             for i in range(1, action_step + 1):
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
-                if direction in diagonals:
-                    new_node_adjacent_block1 = (new_node[0] - direction[0], new_node[1] + direction[1])
-                    new_node_adjacent_block2 = (new_node[0] + direction[0], new_node[1] - direction[1])
 
-                    if ((new_node_adjacent_block1 == 1 or new_node_adjacent_block2 == 1) and math.hypot(new_node_adjacent_block1, new_node_adjacent_block2)<radius) or new_node in visited:
+                if direction in diagonals:
+                    # Get the adjacent blocks for the current diagonal direction
+                    diagonal_opposite1, diagonal_opposite2 = diagonals[direction]
+                    # Calculate the coordinates of the adjacent blocks
+                    new_node_adjacent_block1 = (new_node[0] + diagonal_opposite1[0], new_node[1] + diagonal_opposite1[1])
+                    new_node_adjacent_block2 = (new_node[0] + diagonal_opposite2[0], new_node[1] + diagonal_opposite2[1])
+                    
+                    # Check if any of the adjacent blocks is invalid
+                    if not (self.is_valid(new_node_adjacent_block1,environment=environment,radius=radius)) or not (self.is_valid(new_node_adjacent_block2,environment=environment,radius=radius)): 
+                        skip_direction = True
+                        last = None
                         continue
-                elif (new_node) == goal:
+
+                if new_node in visited:
+                    continue
+                elif new_node == goal:
                     visited.add(last)
                     last = new_node
                     break
-                elif self.is_valid(new_node, environment, radius) and (new_node) != goal:
+                elif self.is_valid(new_node, environment, radius) and new_node != goal:
                     visited.add(last)
-                    last = (new_node)
+                    last = new_node
                 else:
                     break
+
+            if skip_direction:
+                continue
 
             if last:
                 next_actions.append(last)
