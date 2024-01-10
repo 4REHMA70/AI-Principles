@@ -14,7 +14,7 @@ import sys
 
 
 class Robot:
-    def __init__(self, algorithm='bfs', directions='8d', action_step=3):
+    def __init__(self, algorithm='bfs', directions='8d', action_step=3, type='tree'):
         self.fig, self.ax = plt.subplots()
         self.algorithm = algorithm
         
@@ -25,13 +25,14 @@ class Robot:
 
         self.action_step = action_step
 
+        self.type = type
+
     def visualize(self, environment, paths=None, start=None, goal=None):
         
         self.ax.clear()  
         environment = np.array(environment, dtype=float)
                 
         self.ax.imshow(environment, cmap='Greys', origin='upper')  
-        
         if paths:
             
             for path in paths:
@@ -45,7 +46,7 @@ class Robot:
             self.ax.plot(goal[1], goal[0], marker='h', color='limegreen', markersize=10, label='Goal')
         
         self.ax.legend(loc='upper left', fontsize=4)   
-        
+
         plt.pause(0.2)
 
         # ui_display = ui.UserInterface(np.array(environment))
@@ -67,7 +68,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if current in visited:
+            if self.type=='tree' and current in visited:
                 continue
 
             visited.add(current)
@@ -99,7 +100,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if current in visited:
+            if self.type=='tree' and current in visited:
                 continue
 
             visited.add(current)
@@ -134,7 +135,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if current in visited:
+            if self.type=='tree' and current in visited:
                 continue
                 
             visited.add(current)
@@ -165,7 +166,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if current in visited:
+            if self.type=='tree' and current in visited:
                 continue
 
             visited.add(current)
@@ -213,7 +214,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if current in visited or len(path)>= depth_limit:
+            if self.type=='tree' and current in visited or len(path)>= depth_limit:
                 continue
 
             visited.add(current)
@@ -271,18 +272,20 @@ class Robot:
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
         # Test to prove that the radius checking for goal works. Or to prove that it can't cut corners!
-        environment=np.zeros((2,2), dtype=int)
-        environment[:1, :] = 1
-        environment[-1:, :] = 1
-        environment[:, :1] = 1
-        environment[:, -1:] = 1
-        environment[0,1], environment[1,0] = 1, 1
-        action_step = 1
-        start, goal = (1,1), (0,0) # Change start to (14,14)
+        environment=np.zeros((4,4), dtype=int)
+        # environment[:1, :] = 1
+        # environment[-1:, :] = 1
+        # environment[:, :1] = 1
+        # environment[:, -1:] = 1
+        environment[0,2], environment[2,0] = 1, 1
+        action_step = 3
+        start, goal = (3,3), (0,0) # Change start to (14,14)
      """
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
         if path is not None:
+            plt.title(f'{self.algorithm},{self.type}')
+
             for _ in path:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
             plt.pause(0.5)
@@ -303,21 +306,17 @@ class Robot:
 
         # outfile = open('output.log', 'w')
         # sys.stdout = outfile
-        """
-        Sometimes output will buffer or stop. This is not an error
-        Have tried try and except, batch and parallel processing, outputs in a log file instead of printing, flushing and time.sleep, etc.
-        Will just have to re-run.
-        """
 
         for i in range(num_runs):
             rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.get_random_parameters()
+            # rows,cols=50,25
             maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
             environment = maze.generate_maze(rand=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
             # Can comment out if wanting a static action step
-            ACTION_STEP = math.ceil(0.3*max(rows,cols))        
+            action_step = math.ceil(0.3*max(rows,cols))        
 
-            # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated
+            # DO NOT UN-COMMENT IF YOUR NUM_RUN IS HIGH. Shows all plots visually for matrices generated (not the searches)
             """
             fig, ax = plt.subplots()
             ax.imshow(environment, cmap='Greys', origin='upper')
@@ -325,7 +324,7 @@ class Robot:
             plt.pause(1)  # Pause for a short duration to display the plot
             """
             density = self.calculate_obstacle_density(maze.matrix)
-            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=False, action_step=ACTION_STEP)
+            path, exec_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=False, action_step=action_step)
 
             # Because path and visited may be None when radius too big to explore
             if path is not None and visited is not None:
@@ -351,10 +350,16 @@ class Robot:
 
         avg_time = total_time/num_runs
         avg_memory = total_memory/num_runs
+        variance_exec_time = np.var(all_exec_times)
+        variance_peak_memory = np.var(all_peak_memories)
+
         print()
+        print(self.algorithm, self.type)
         print(f"Total Number of runs: {num_runs}")
         print(f"Average Execution Time: {avg_time} seconds")
-        print(f"Average Peak Memory: {avg_memory/(1024 * 1024)} MB")
+        print(f"Average Peak Memory: {avg_memory / (1024 * 1024)} MB")
+        print(f"Variance of Execution Time: {variance_exec_time} seconds^2")
+        print(f"Variance of Peak Memory: {variance_peak_memory / (1024 * 1024)} MB^2")
         print(f"Average Path to Spacing Ratio: {np.mean(all_path_to_spacing_ratios)}")
         print(f"Average Search Space Coverage: {np.mean(all_search_space_coverages)}")
         print(f"Total Solutions: {solutions_count}")
@@ -365,6 +370,8 @@ class Robot:
         plt.title(f'Distribution of Execution Time for {robot.algorithm}')
         plt.xlabel('Execution Time (seconds)')
         plt.ylabel('Frequency')
+        plt.axvline(x=avg_time, color='red', linestyle='--', linewidth=1, label=f'Avg: {avg_time:.2f}')
+
         plt.show()
 
         # Distribution plot for peak memory
@@ -373,6 +380,8 @@ class Robot:
         plt.title(f'Distribution of Peak Memory for {robot.algorithm}')
         plt.xlabel('Peak Memory (MB)')
         plt.ylabel('Frequency')
+        plt.axvline(x=avg_memory, color='red', linestyle='--', linewidth=1, label=f'Avg: {avg_memory:.2f}')
+
         plt.show()
         
         # outfile.close()
@@ -402,6 +411,7 @@ class Robot:
             for i in range(1, action_step + 1):
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
 
+                # THIS CHECKING MORE THAN TRIPLES THE DURATION FOR THE ALGORITHMS (3.5x)
                 if direction in diagonals:
                     # Get the adjacent blocks for the current diagonal direction
                     diagonal_opposite1, diagonal_opposite2 = diagonals[direction]
@@ -413,9 +423,9 @@ class Robot:
                     if not (self.is_valid(new_node_adjacent_block1,environment=environment,radius=radius)) or not (self.is_valid(new_node_adjacent_block2,environment=environment,radius=radius)): 
                         skip_direction = True
                         last = None
-                        continue
+                        # continue
 
-                if new_node in visited:
+                if self.type=='tree' and new_node in visited:
                     continue
                 elif new_node == goal:
                     visited.add(last)
@@ -461,7 +471,10 @@ class Robot:
         )
 
 if __name__ == "__main__":
-    robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP)
+    
+    # for ALGORITHM in ['bfs', 'dfs', 'a_star', 'ucs', 'ids']:
+    #     for TYPE in ['tree']:
+    robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP, type=TYPE)
     random.seed()  # FOR REPRODUCIBILITY!
 
     if (RADIUS < 1) or (GOAL_AND_START_SPACING > min(ROWS, COLS)):

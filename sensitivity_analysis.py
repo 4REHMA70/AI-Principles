@@ -11,7 +11,7 @@ def sensitivity_analysis(robot, varied_params, fixed_params, num_runs):
         "Avg Peak Memory (MB),Std Dev Peak Memory (MB),Avg Coeff of Variation Execution Time,"
         "Avg Coeff of Variation Peak Memory\n")
 
-        for algorithm in ['ids', 'bfs', 'dfs', 'a_star', 'ucs']:
+        for algorithm in ['bfs', 'dfs', 'a_star', 'ucs', 'ids']:
             robot.algorithm = algorithm
             print('___________________________________________')
             print(algorithm.upper())
@@ -88,29 +88,3 @@ num_runs = 100
 robot = Robot()
 print("OUTPUT DISPLAYED IN SENSITIVITY_OUTPUT.LOG")
 sensitivity_analysis(robot, varied_params, fixed_params, num_runs)
-
-
-"""
-Cutting Rate:
-UCS and BFS: Increasing cutting_rate generally leads to a decrease in average execution time but an increase in standard deviation.
-DFS and A:* The influence is less pronounced in A*, but increasing cutting_rate still results in a decrease in average execution time with an increase in standard deviation.
-
-Lone Blocks Rate:
-UCS: The effect is not very significant.
-BFS and DFS: Lower lone_blocks_rate tends to result in lower average execution time with a moderate increase in standard deviation.
-A:* Lower lone_blocks_rate tends to result in lower average execution time with a moderate increase in standard deviation.
-
-Directions:
-UCS, BFS, DFS, and A:* '8d' generally performs better than '4d' in terms of both average execution time and standard deviation.
-
-Action Step:
-UCS, BFS, DFS, and A:* Smaller action_step tends to result in better performance for all algorithms. A* stands out as having lower and relatively stable values across different action steps. 
-
-Radius:
-UCS, BFS, DFS, and A:* The radius parameter does not seem to strongly influence the performance of any of the algorithms.
-
-
-For ucs and bfs, the cutting_rate and lone_blocks_rate parameters have the largest impact on execution time and memory usage variability. The coefficients of variation for those parameters are much higher than other parameters.
-For dfs, the cutting_rate and lone_blocks_rate parameters also have a sizable impact on variability. However, the memory usage shows extremely high variation even for parameters like directions and radius.
-For A*, the radius, action_step and directions show very little variation in memory usage. But the execution time variation is extremely high across all parameters - over 2x the coefficient of variation in many cases.
-"""
