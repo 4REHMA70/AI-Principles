@@ -16,6 +16,7 @@ import sys
 class Robot:
     def __init__(self, algorithm='bfs', directions='8d', action_step=3, type='tree'):
         self.fig, self.ax = plt.subplots()
+        
         self.algorithm = algorithm
         
         if directions == '8d':
@@ -270,7 +271,7 @@ class Robot:
         maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
         environment = maze.generate_maze(rand=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
-        """
+        """        
         # Test to prove that the radius checking for goal works. Or to prove that it can't cut corners!
         environment=np.zeros((4,4), dtype=int)
         # environment[:1, :] = 1
@@ -280,7 +281,7 @@ class Robot:
         environment[0,2], environment[2,0] = 1, 1
         action_step = 3
         start, goal = (3,3), (0,0) # Change start to (14,14)
-     """
+        """     
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
         if path is not None:
@@ -411,7 +412,7 @@ class Robot:
             for i in range(1, action_step + 1):
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
 
-                # THIS CHECKING MORE THAN TRIPLES THE DURATION FOR THE ALGORITHMS (3.5x)
+                # THIS CHECKING MORE THAN TRIPLES THE DURATION FOR THE ALGORITHMS (3.5x). Should be after visited check
                 if direction in diagonals:
                     # Get the adjacent blocks for the current diagonal direction
                     diagonal_opposite1, diagonal_opposite2 = diagonals[direction]
@@ -423,9 +424,9 @@ class Robot:
                     if not (self.is_valid(new_node_adjacent_block1,environment=environment,radius=radius)) or not (self.is_valid(new_node_adjacent_block2,environment=environment,radius=radius)): 
                         skip_direction = True
                         last = None
-                        # continue
+                        continue
 
-                if self.type=='tree' and new_node in visited:
+                if new_node in visited:
                     continue
                 elif new_node == goal:
                     visited.add(last)
@@ -445,18 +446,6 @@ class Robot:
                 action_costs.append(cost)
 
         return zip(next_actions, action_costs)
-
-    def get_random_parameters(self):
-        rows = random.randint(15, 30)
-        cols = random.randint(15, 30)
-        # HIGH ROWS AND COLS HERE LIKE 40 QUADRATICALLY INCR. SEARCH SPACE. STOPS OUTPUT
-        seed = random.randint(1, 1000)
-        cutting_rate = random.uniform(0.4, 0.85)
-        # goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
-        # SOMETIMES GOAL START SPACING IS PROBLEMATIC
-        goal_and_start_spacing = 10
-        lone_blocks_rate = random.uniform(0.9,1)
-        return rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate
     
     def is_valid(self, new_node, environment, radius):
         radius -= 1
@@ -470,6 +459,18 @@ class Robot:
             and environment[new_node[0]][new_node[1]] == 0
         )
 
+    def get_random_parameters(self):
+        rows = random.randint(15, 30)
+        cols = random.randint(15, 30)
+        # HIGH ROWS AND COLS HERE LIKE 40 QUADRATICALLY INCR. SEARCH SPACE. STOPS OUTPUT
+        seed = random.randint(1, 1000)
+        cutting_rate = random.uniform(0.4, 0.85)
+        # goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
+        # SOMETIMES GOAL START SPACING IS PROBLEMATIC
+        goal_and_start_spacing = 10
+        lone_blocks_rate = random.uniform(0.9,1)
+        return rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate
+
 if __name__ == "__main__":
     
     # for ALGORITHM in ['bfs', 'dfs', 'a_star', 'ucs', 'ids']:
@@ -478,18 +479,18 @@ if __name__ == "__main__":
     random.seed()  # FOR REPRODUCIBILITY!
 
     if (RADIUS < 1) or (GOAL_AND_START_SPACING > min(ROWS, COLS)):
-        print("Error: Change values. RADIUS > 1, and GOAL_AND_START_SPACING > the smaller of ROWS and COLS")
-
-    # Single Run: Visualization
-    if VISUALIZING and not STATIC:
-        # Random Parameters
-        rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.get_random_parameters()
-        # ACTION_STEP = math.ceil(0.3*max(rows,cols))
-        robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=robot.action_step)
-
-    elif VISUALIZING and STATIC:
-        # Static Parameters
-        robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=robot.action_step)
+        print("Error: Change values. RADIUS > 1, and GOAL_AND_START_SPACING > the smaller of ROWS and COLS. ROW AND COLS > 5")
     else:
-        # Multiple Runs: Average Scores
-        robot.multiple_runs(NUM_RUNS)
+        # Single Run: Visualization
+        if VISUALIZING and not STATIC:
+            # Random Parameters
+            rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.get_random_parameters()
+            # ACTION_STEP = math.ceil(0.3*max(rows,cols))
+            robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=robot.action_step)
+
+        elif VISUALIZING and STATIC:
+            # Static Parameters
+            robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=robot.action_step)
+        else:
+            # Multiple Runs: Average Scores
+            robot.multiple_runs(NUM_RUNS)
