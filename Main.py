@@ -283,7 +283,7 @@ class Robot:
         start, goal = (7,7), (0,0) 
         """
         # CAN MANUALLY SKIP VISUALIZING HERE IF WANT ONLY METRICS AND LAST PATH
-        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
+        path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=VISUALIZING, action_step=action_step)
         
         if path is not None:
 
@@ -477,7 +477,7 @@ class Robot:
 
 if __name__ == "__main__":
     
-    # for ALGORITHM in ['bfs', 'dfs', 'a_star', 'ucs', 'ids']:
+    # for ALGORITHM in ['bfs', 'a_star', 'ucs', 'ids', 'dfs']:
     #     for TYPE in ['tree','graph']:
     robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP, type=TYPE)
     random.seed()  # FOR REPRODUCIBILITY!
@@ -486,13 +486,13 @@ if __name__ == "__main__":
         print("Error: Change values. RADIUS > 1, and GOAL_AND_START_SPACING > the smaller of ROWS and COLS. ROW AND COLS > 5")
     else:
         # Single Run: Visualization
-        if VISUALIZING and not STATIC:
+        if SINGLE and not STATIC:
             # Random Parameters
             rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = robot.get_random_parameters()
             # ACTION_STEP = math.ceil(0.3*max(rows,cols))
             robot.single_run(rows, cols, seed, cutting_rate, goal_and_start_spacing, action_step=robot.action_step)
 
-        elif VISUALIZING and STATIC:
+        elif SINGLE and STATIC:
             # Static Parameters
             robot.single_run(ROWS, COLS, SEED, CUTTING_RATE, GOAL_AND_START_SPACING, LONE_BLOCKS_RATE, action_step=robot.action_step)
         else:
