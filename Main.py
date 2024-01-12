@@ -8,7 +8,7 @@ import math
 import tracemalloc
 import seaborn as sns
 import time
-import ui
+# import ui
 from config import *
 import sys
 
@@ -29,7 +29,7 @@ class Robot:
         self.type = type
 
     def visualize(self, environment, paths=None, start=None, goal=None):
-        
+
         self.ax.clear()  
         environment = np.array(environment, dtype=float)
                 
@@ -45,9 +45,10 @@ class Robot:
 
         if goal:
             self.ax.plot(goal[1], goal[0], marker='h', color='limegreen', markersize=10, label='Goal')
-        
-        self.ax.legend(loc='upper left', fontsize=4)   
 
+        self.ax.grid(True, linestyle='--', alpha=0.2)  # Uncomment this for grid lines
+        
+        self.ax.legend(loc='lower right', fontsize=6)   
         plt.pause(0.2)
 
         # ui_display = ui.UserInterface(np.array(environment))
@@ -62,7 +63,6 @@ class Robot:
         while stack:
             current, path = stack.pop() 
             distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
-
             if current == goal or distance < radius:
                 paths_explored.append(path + [current])
                 if visualizing:
@@ -78,8 +78,7 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-                
-            for next_action, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
+            for next_action, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
                 stack.append((next_action, path + [current]))
 
         return None
@@ -115,7 +114,7 @@ class Robot:
             action_step, consequently sacrificing exploration. 66% solutions missed 
             """
 
-            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
+            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
                 queue.append((next_action, path + [current])) # Appending only last values in each direction to queue 
                 
         return None
@@ -145,7 +144,7 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 # current, goal, environment, visited, action_step, radius
-            for next_node, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
+            for next_node, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
                 new_cost = cost + action_cost  
                 open_set.put((new_cost, next_node, path + [current]))
         
@@ -176,7 +175,7 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, environment=environment, visited=visited, action_step=action_step, radius=radius):
+            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
                 new_cost = cost + action_cost
 
                 # Euclidean Distance
@@ -224,7 +223,7 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
             # Action cost isn't used, so excluded
-            for next_action, action_cost in self.get_next_actions(current, goal, environment, visited, action_step, radius):
+            for next_action, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
                 stack.append((next_action, path + [current]))
 
         return None
@@ -271,29 +270,33 @@ class Robot:
         maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
         environment = maze.generate_maze(rand=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
-        """        
+        """
         # Test to prove that the radius checking for goal works. Or to prove that it can't cut corners!
-        environment=np.zeros((4,4), dtype=int)
+        environment=np.zeros((10,10), dtype=int)
         # environment[:1, :] = 1
         # environment[-1:, :] = 1
         # environment[:, :1] = 1
         # environment[:, -1:] = 1
-        environment[0,2], environment[2,0] = 1, 1
+        # environment[1,6], environment[6,1] = 1, 1 # TESTING FOR RADIUS OF 3. start, goal = (7,7), (1,1)
+        environment[0,3], environment[3,0] = 1, 1 # TESTING FOR RADIUS OF 2. start, goal = (7,7), (0,0)
         action_step = 3
-        start, goal = (3,3), (0,0) # Change start to (14,14)
-        """     
+        start, goal = (7,7), (0,0) 
+        """
+        # CAN MANUALLY SKIP VISUALIZING HERE IF WANT ONLY METRICS AND LAST PATH
         path, execution_time, current, peak_memory, visited = self.run_search_algorithm(environment, start, goal, visualizing=True, action_step=action_step)
         
         if path is not None:
-            plt.title(f'{self.algorithm},{self.type}')
 
             for _ in path:
                 self.visualize(environment, paths=[path], start=start, goal=goal)
-            plt.pause(0.5)
+            plt.pause(0.1)
             plt.close()
+            print(self.algorithm, self.type)
             print("Path found!")
+            print(path)
 
         else:
+            plt.pause(0.1)
             print("No solution found!")
 
     def multiple_runs(self, num_runs):
@@ -391,17 +394,14 @@ class Robot:
         distance = math.sqrt((rows-1 - 0)**2 + (cols-1 - 0)**2)
         return math.floor(distance)
 
-    def get_next_actions(self, current, goal, environment, visited, action_step, radius):
+    def get_next_actions(self, current, goal, path, environment, visited, action_step, radius):
         next_actions = []
         action_costs = []
         diagonals = {
-            (-1, -1): ((1, 0), (0, 1)), # Down-Left, adjacent blocks: Up, Right
-            
-            (-1, 1): ((1, 0), (0, -1)), # Up-Left, adjacent blocks: Down, Right
-            
-            (1, -1): ((-1, 0), (0, 1)), # Down-Right, adjacent blocks: Up, Left
-            
-            (1, 1): ((-1, 0), (0, -1)) # Up-Right, adjacent blocks: Down, Left
+            (-1, -1): ((1, 0), (0, 1)), 
+            (-1, 1): ((1, 0), (0, -1)), 
+            (1, -1): ((-1, 0), (0, 1)), 
+            (1, 1): ((-1, 0), (0, -1)) 
         }        
         skip_direction = False
 
@@ -411,6 +411,12 @@ class Robot:
 
             for i in range(1, action_step + 1):
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
+               
+                if new_node in visited and self.type=='tree':
+                    continue
+ 
+                if (len(path)>2) and new_node == path[-1]: # TO PREVENT IT FROM GOING BACK TO PARENT IMMEDIATELY
+                    continue
 
                 # THIS CHECKING MORE THAN TRIPLES THE DURATION FOR THE ALGORITHMS (3.5x). Should be after visited check
                 if direction in diagonals:
@@ -426,8 +432,6 @@ class Robot:
                         last = None
                         continue
 
-                if new_node in visited:
-                    continue
                 elif new_node == goal:
                     visited.add(last)
                     last = new_node
@@ -474,7 +478,7 @@ class Robot:
 if __name__ == "__main__":
     
     # for ALGORITHM in ['bfs', 'dfs', 'a_star', 'ucs', 'ids']:
-    #     for TYPE in ['tree']:
+    #     for TYPE in ['tree','graph']:
     robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP, type=TYPE)
     random.seed()  # FOR REPRODUCIBILITY!
 
