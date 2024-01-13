@@ -411,13 +411,8 @@ class Robot:
 
             for i in range(1, action_step + 1):
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
-               
-                if new_node in visited and self.type=='tree':
-                    continue
- 
-                if (len(path)>2) and new_node == path[-1]: # TO PREVENT IT FROM GOING BACK TO PARENT IMMEDIATELY
-                    continue
-
+                
+                # CUTTING CORNERS LOGIC
                 # THIS CHECKING MORE THAN TRIPLES THE DURATION FOR THE ALGORITHMS (3.5x). Should be after visited check
                 if direction in diagonals:
                     # Get the adjacent blocks for the current diagonal direction
@@ -431,6 +426,14 @@ class Robot:
                         skip_direction = True
                         last = None
                         continue
+
+                # THESE TWO CHECKS NEED TO BE BELOW CUTTING CORNERS LOGIC. SOMEHOW INTERRUPTS IT OTHERWISE
+
+                if new_node in visited and self.type=='tree':
+                    continue
+ 
+                if (len(path)>2) and new_node == path[-1]: # TO PREVENT IT FROM GOING BACK TO PARENT IMMEDIATELY
+                    continue
 
                 elif new_node == goal:
                     visited.add(last)
@@ -450,7 +453,7 @@ class Robot:
                 action_costs.append(cost)
 
         return zip(next_actions, action_costs)
-    
+
     def is_valid(self, new_node, environment, radius):
         radius -= 1
         for i in range(max(0, new_node[0]-radius), min(len(environment), new_node[0]+radius+1)):
