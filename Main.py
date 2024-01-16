@@ -14,13 +14,16 @@ import sys
 
 
 class Robot:
-    def __init__(self, algorithm='bfs', directions='8d', action_step=3, type='tree'):
+    def __init__(self, algorithm='bfs', directions='8d', action_step=3, type='graph'):
         self.fig, self.ax = plt.subplots()
         
         self.algorithm = algorithm
         
         if directions == '8d':
-            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): 1, (-1, 1): 1, (1, -1): 1, (1, 1): 1}
+            # COSTS FOR DIAGONALS IN PROJECT WERE ALL 1
+            self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1, (-1, -1): math.sqrt(2), (-1, 1): math.sqrt(2), (1, -1): math.sqrt(2), (1, 1): math.sqrt(2)}
+            # THIS ONE BELOW ACTS BIZARRE ON A_STAR GRAPH. A_STAR ACCOUNTS FOR COST, OFTEN GOES IN DIRECTION AWAY FROM GOAL THEN GETS STUCK
+            # self.directions_cost = {(-1, 0): 1, (-1, 1): math.sqrt(2), (0, 1): 1, (1, 1): math.sqrt(2), (1, 0): 1, (1, -1): math.sqrt(2), (0, -1): 1, (-1, -1): math.sqrt(2)}
         else: 
             self.directions_cost = {(-1, 0): 1, (1, 0): 1, (0, -1): 1, (0, 1): 1}
 
@@ -56,12 +59,12 @@ class Robot:
 
     def depth_first_search(self, environment, start, goal, visualizing, radius=RADIUS, action_step=3):
 
-        stack = [(start, [])]
+        open_set = [(start, [])]
         paths_explored = []
         visited = set()
 
-        while stack:
-            current, path = stack.pop() 
+        while open_set:
+            current, path = open_set.pop() 
             distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
             if current == goal or distance < radius:
                 paths_explored.append(path + [current])
@@ -69,7 +72,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if self.type=='tree' and current in visited:
+            if self.type=='graph' and current in visited:
                 continue
 
             visited.add(current)
@@ -78,8 +81,8 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_action, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
-                stack.append((next_action, path + [current]))
+            for next_node, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
+                open_set.append((next_node, path + [current]))
 
         return None
     
@@ -100,7 +103,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if self.type=='tree' and current in visited:
+            if self.type=='graph' and current in visited:
                 continue
 
             visited.add(current)
@@ -114,8 +117,8 @@ class Robot:
             action_step, consequently sacrificing exploration. 66% solutions missed 
             """
 
-            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
-                queue.append((next_action, path + [current])) # Appending only last values in each direction to queue 
+            for next_node, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
+                queue.append((next_node, path + [current])) # Appending only last values in each direction to queue 
                 
         return None
 
@@ -128,14 +131,14 @@ class Robot:
 
         while not open_set.empty():
             cost, current, path = open_set.get()
-
-            if current == goal:
+            distance = math.sqrt((goal[0] - current[0])**2 + (goal[1] - current[1])**2)
+            if current == goal or distance < radius:
                 paths_explored.append(path + [current])  
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if self.type=='tree' and current in visited:
+            if self.type=='graph' and current in visited:
                 continue
                 
             visited.add(current)
@@ -158,15 +161,15 @@ class Robot:
 
         while open_set:
             open_set.sort(key=lambda x: x[1] + x[2])  # Sorting by cost + heuristic
-            current, cost, _, path = open_set.pop(0)
+            current, cost, distance, path = open_set.pop(0)
 
-            if current == goal:
+            if current == goal or distance < radius:
                 paths_explored.append(path + [current])
                 if visualizing:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if self.type=='tree' and current in visited:
+            if self.type=='graph' and current in visited:
                 continue
 
             visited.add(current)
@@ -175,7 +178,7 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
 
-            for next_action, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
+            for next_node, action_cost in self.get_next_actions(current=current, goal=goal, path=path, environment=environment, visited=visited, action_step=action_step, radius=radius):
                 new_cost = cost + action_cost
 
                 # Euclidean Distance
@@ -184,7 +187,7 @@ class Robot:
                 # Manhattan Distance
                 heuristic_value = abs(goal[0] - current[0]) + abs(goal[1] - current[1])  
 
-                open_set.append((next_action, new_cost, heuristic_value, path + [current]))
+                open_set.append((next_node, new_cost, heuristic_value, path + [current]))
 
         return None
 
@@ -214,7 +217,7 @@ class Robot:
                     self.visualize(environment, paths=paths_explored, start=start, goal=goal)
                 return path + [current], visited
 
-            if self.type=='tree' and current in visited or len(path)>= depth_limit:
+            if self.type=='graph' and current in visited or len(path)>= depth_limit:
                 continue
 
             visited.add(current)
@@ -223,8 +226,8 @@ class Robot:
             if visualizing:
                 self.visualize(environment, paths=paths_explored, start=start, goal=goal)
             # Action cost isn't used, so excluded
-            for next_action, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
-                stack.append((next_action, path + [current]))
+            for next_node, action_cost in self.get_next_actions(current, goal, path, environment, visited, action_step, radius):
+                stack.append((next_node, path + [current]))
 
         return None
 
@@ -268,7 +271,7 @@ class Robot:
 
     def single_run(self, rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate=1, action_step=3):
         maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
-        environment = maze.generate_maze(rand=cutting_rate)
+        environment = maze.generate_maze(cutting_rate=cutting_rate)
         start, goal = maze.set_start_and_goal(goal_and_start_spacing)
         """
         # Test to prove that the radius checking for goal works. Or to prove that it can't cut corners!
@@ -278,7 +281,7 @@ class Robot:
         # environment[:, :1] = 1
         # environment[:, -1:] = 1
         # environment[1,6], environment[6,1] = 1, 1 # TESTING FOR RADIUS OF 3. start, goal = (7,7), (1,1)
-        environment[0,3], environment[3,0] = 1, 1 # TESTING FOR RADIUS OF 2. start, goal = (7,7), (0,0)
+        environment[0,1], environment[1,0] = 1, 1 # TESTING FOR RADIUS OF 2. start, goal = (7,7), (0,0)
         action_step = 3
         start, goal = (7,7), (0,0) 
         """
@@ -294,6 +297,8 @@ class Robot:
             print(self.algorithm, self.type)
             print("Path found!")
             print(path)
+            print("Elapsed time: ", execution_time)
+            print("Peak Memory: ", peak_memory/(1024*1024))
 
         else:
             plt.pause(0.1)
@@ -313,9 +318,9 @@ class Robot:
 
         for i in range(num_runs):
             rows, cols, seed, cutting_rate, goal_and_start_spacing, lone_blocks_rate = self.get_random_parameters()
-            # rows,cols=50,25
+            # rows,cols=50,50
             maze = Maze(rows=rows, cols=cols, seed=seed, lone_blocks_rate=lone_blocks_rate)
-            environment = maze.generate_maze(rand=cutting_rate)
+            environment = maze.generate_maze(cutting_rate=cutting_rate)
             start, goal = maze.set_start_and_goal(goal_and_start_spacing)
             # Can comment out if wanting a static action step
             action_step = math.ceil(0.3*max(rows,cols))        
@@ -382,7 +387,7 @@ class Robot:
         plt.figure(figsize=(10, 5))
         sns.histplot(all_peak_memories, kde=True, color='salmon', bins=20)
         plt.title(f'Distribution of Peak Memory for {robot.algorithm}')
-        plt.xlabel('Peak Memory (MB)')
+        plt.xlabel('Peak Memory (bytes)')
         plt.ylabel('Frequency')
         plt.axvline(x=avg_memory, color='red', linestyle='--', linewidth=1, label=f'Avg: {avg_memory:.2f}')
 
@@ -395,21 +400,21 @@ class Robot:
         return math.floor(distance)
 
     def get_next_actions(self, current, goal, path, environment, visited, action_step, radius):
-        next_actions = []
+        next_nodes = []
         action_costs = []
         diagonals = {
             (-1, -1): ((1, 0), (0, 1)), 
             (-1, 1): ((1, 0), (0, -1)), 
             (1, -1): ((-1, 0), (0, 1)), 
             (1, 1): ((-1, 0), (0, -1)) 
-        }        
+        }
         skip_direction = False
 
         for direction in self.directions_cost:
             last = None
             cost = self.directions_cost[direction]
 
-            for i in range(1, action_step + 1):
+            for i in range(1, action_step + 1): 
                 new_node = current[0] + i * direction[0], current[1] + i * direction[1]
                 
                 # CUTTING CORNERS LOGIC
@@ -429,7 +434,7 @@ class Robot:
 
                 # THESE TWO CHECKS NEED TO BE BELOW CUTTING CORNERS LOGIC. SOMEHOW INTERRUPTS IT OTHERWISE
 
-                if new_node in visited and self.type=='tree':
+                if new_node in visited and self.type=='graph':
                     continue
  
                 if (len(path)>2) and new_node == path[-1]: # TO PREVENT IT FROM GOING BACK TO PARENT IMMEDIATELY
@@ -449,10 +454,10 @@ class Robot:
                 continue
 
             if last:
-                next_actions.append(last)
+                next_nodes.append(last)
                 action_costs.append(cost)
 
-        return zip(next_actions, action_costs)
+        return zip(next_nodes, action_costs)
 
     def is_valid(self, new_node, environment, radius):
         radius -= 1
@@ -470,7 +475,7 @@ class Robot:
         rows = random.randint(15, 30)
         cols = random.randint(15, 30)
         # HIGH ROWS AND COLS HERE LIKE 40 QUADRATICALLY INCR. SEARCH SPACE. STOPS OUTPUT
-        seed = random.randint(1, 1000)
+        seed = random.randint(1, 10000)
         cutting_rate = random.uniform(0.4, 0.85)
         # goal_and_start_spacing = random.randint(round(0.25 * self.euclidean_distance(rows, cols)), round(0.85 * self.euclidean_distance(rows, cols)))
         # SOMETIMES GOAL START SPACING IS PROBLEMATIC
@@ -481,7 +486,7 @@ class Robot:
 if __name__ == "__main__":
     
     # for ALGORITHM in ['bfs', 'a_star', 'ucs', 'ids', 'dfs']:
-    #     for TYPE in ['tree','graph']:
+    # for TYPE in ['graph','tree']:
     robot = Robot(ALGORITHM, DIRECTIONS, ACTION_STEP, type=TYPE)
     random.seed()  # FOR REPRODUCIBILITY!
 

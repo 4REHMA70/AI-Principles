@@ -29,7 +29,7 @@ def sensitivity_analysis(robot, varied_params, fixed_params, num_runs):
                     print(current_params)
                     for _ in range(num_runs):
                         maze = Maze(rows=current_params["rows"], cols=current_params["cols"], seed=current_params["seed"], lone_blocks_rate=current_params["lone_blocks_rate"])
-                        environment = maze.generate_maze(rand=current_params["cutting_rate"])
+                        environment = maze.generate_maze(cutting_rate=current_params["cutting_rate"])
                         start, goal = maze.set_start_and_goal(current_params["goal_and_start_spacing"])
                         action_step = current_params["action_step"]
 

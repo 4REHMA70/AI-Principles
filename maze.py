@@ -12,7 +12,7 @@ class Maze:
         self.matrix = [[1] * cols for _ in range(rows)]  # Initialize with walls. For each col in row, turn it into 1
         self.lone_blocks_rate = lone_blocks_rate 
 
-    def generate_maze(self, rand):
+    def generate_maze(self, cutting_rate):
         random.seed(self.seed)  # Setting seed
 
         # Initialize starting point and stack for backtracking
@@ -21,25 +21,22 @@ class Maze:
 
         while stack:  # Same logic as search algorithms. While stack isn't empty:
             current_cell = stack[-1]  # Set current cell. FILO (First In Last Out) method from DFS
-            neighbors = self.get_unvisited_neighbors(current_cell[0], current_cell[1])  # Sets the unvisited neighbors
+            neighbors = self.get_unvisited_neighbors(current_cell)  # Sets the unvisited neighbors
 
             if neighbors:
                 next_cell = random.choice(neighbors)  # If neighbors are there, randomly choose the next cell to explore
-                x, y = next_cell
-                nx, ny = current_cell
 
                 # Carve a path
-                self.matrix[(x + nx) // 2][(y + ny) // 2] = 0  # Set cell between current and next as path
-                self.matrix[x][y] = 0  # Set next cell as path
+                self.matrix[(next_cell[0] + current_cell[0]) // 2][(next_cell[1] + current_cell[1]) // 2] = 0  # Set cell between current and next as path
+                self.matrix[next_cell[0]][next_cell[1]] = 0  # Set next cell as path
 
                 # Get random neighbors
-                random_neighbors = self.get_unvisited_neighbors(x, y)
+                random_neighbors = self.get_unvisited_neighbors(next_cell)
 
-                if random_neighbors and random.random() < rand:  # Adjust rate/probability of cutting as needed. 
+                if random_neighbors and random.random() < cutting_rate:  # Adjust rate/probability of cutting as needed. 
                     # Only proceed with path generation under certain probability
                     random_neighbor = random.choice(random_neighbors)
-                    rx, ry = random_neighbor
-                    self.matrix[(x + rx) // 2][(y + ry) // 2] = 0  # Set cell between current and random neighbor as path. 
+                    self.matrix[(next_cell[0] + random_neighbor[0]) // 2][(next_cell[1] + random_neighbor[1]) // 2] = 0  # Set cell between current and random neighbor as path. 
 
                 stack.append(next_cell)
             else:
@@ -49,11 +46,11 @@ class Maze:
         if self.lone_blocks_rate > 0:
             self.remove_isolated_blocks()
         return np.array(self.matrix)
-   
-    def get_unvisited_neighbors(self, x, y): 
-        neighbors = [(x + dx, y + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to x and y
-        neighbors = [(nx, ny) for nx, ny in neighbors if 0 < nx < self.rows - 1 and 0 < ny < self.cols - 1 and self.matrix[nx][ny]] # For valid neighbors, get coords
-        return [neighbor for neighbor in neighbors if self.matrix[(x + neighbor[0]) // 2][(y + neighbor[1]) // 2]] # Setting neighbors that have an unvisited cell in between (neighbors with a '1' in the middle indicate an unvisited cell)
+
+    def get_unvisited_neighbors(self, next_cell): 
+        neighbors = [(next_cell[0] + dx, next_cell[1] + dy) for dx, dy in [(2, 0), (-2, 0), (0, 2), (0, -2)]] # Defining potential neighbors, each 2 steps away, right, left, up, down. Adding dx and dy to next_cell[0] and next_cell[1]
+        neighbors = [(current_cell) for current_cell in neighbors if 0 < current_cell[0] < self.rows - 1 and 0 < current_cell[1] < self.cols - 1 and self.matrix[current_cell[0]][current_cell[1]]] # For valid neighbors, get coords
+        return [neighbor for neighbor in neighbors if self.matrix[(next_cell[0] + neighbor[0]) // 2][(next_cell[1] + neighbor[1]) // 2]] # Setting neighbors that have an unvisited cell in between (neighbors with a '1' in the middle indicate an unvisited cell)
 
     def spacing(self): 
         if self.space_step != 0: 
@@ -73,17 +70,17 @@ class Maze:
         rows, cols = len(self.matrix), len(self.matrix[0])
         
         # Inner function to get neighbors. Different from get_unvisited_neighbors which is tailored for the wall generation 
-        def get_neighbors(r, c):
+        def get_neighbors(row, col):
             directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-            neighbors = [(r + dr, c + dc) for dr, dc in directions if 0 <= r + dr < rows and 0 <= c + dc < cols and self.matrix[r + dr][c + dc] == 1]
+            neighbors = [(row + direction[0], col + direction[1]) for direction in directions if 0 <= row + direction[0] < rows and 0 <= col + direction[1] < cols and self.matrix[row + direction[0]][col + direction[1]] == 1]
             return neighbors
         
         # Identify and remove isolated blocks
         removed = 0
-        for r in range(1, rows-1):
-            for c in range(1, cols-1):
-                if self.matrix[r][c] == 1 and not get_neighbors(r, c) and random.random() < self.lone_blocks_rate:
-                    self.matrix[r][c] = 0
+        for row in range(1, rows-1):
+            for col in range(1, cols-1):
+                if self.matrix[row][col] == 1 and not get_neighbors(row, col) and random.random() < self.lone_blocks_rate:
+                    self.matrix[row][col] = 0
                     removed += 1
 
     def set_start_and_goal(self, min_distance=5):

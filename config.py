@@ -17,7 +17,7 @@ WALL_IMAGE_LIST = ['assets/UI/map/obstacles/rock.png']
 #__________________________________________________________________
 # Main configuration
 
-VISUALIZING = False
+VISUALIZING = False # WHEN VISUALIZING, MEMORY AND TIME STATISTICS ARE THROWN OFF!
 SINGLE = True
 # If single run, static maze?
 STATIC = False
@@ -30,9 +30,9 @@ STATIC = False
 # the steps at which obstacles are removed from map to create space (2 or 3)
 # minimum spacing for goal and start
 # and rate at which lone blocks are removed (0-1) ):
-ROWS, COLS = 17,17
+ROWS, COLS = 16,22
 SEED = 2
-CUTTING_RATE, LONE_BLOCKS_RATE = 0.75, 0.8
+CUTTING_RATE, LONE_BLOCKS_RATE = 0.45, 0
 SPACE_STEP, GOAL_AND_START_SPACING = 3, 10
 
 # ALGORITHM CONFIG
@@ -41,10 +41,13 @@ SPACE_STEP, GOAL_AND_START_SPACING = 3, 10
 ALGORITHM = 'bfs'
 # Can be 8d or 4d (latter not needed to be specified. Default)
 DIRECTIONS = '8d' 
-ACTION_STEP = 3
+ACTION_STEP = 3 
 # ACTION_STEP = math.ceil(0.3*max(ROWS,COLS))  
+"""
+ACTION STEP 1 BEHAVES UNEXPECTEDLY WITH GRAPH. GETS STUCK
+"""
 RADIUS = 1
-TYPE = 'graph'
+TYPE = 'graph' # Defaults to tree if input not graph. 
 
 # Number of runs if visualizing is off
 NUM_RUNS = 100
